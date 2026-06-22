@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TrekRank — Web Preview</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg0:#0c1530; --bg1:#16264d; --card:#1b2c52; --card2:#22386a;
+    --accent:#6ee7d0; --accent2:#4cc9b0; --text:#eaf2ff; --muted:#9fb0d0;
+    --danger:#ff7a7a; --good:#7ee787;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    background:#070b18; color:var(--text);
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px; gap:28px; flex-wrap:wrap;
+  }
+  /* iPhone frame */
+  .phone {
+    width:390px; height:844px; background:linear-gradient(180deg,var(--bg0),var(--bg1));
+    border-radius:54px; position:relative; overflow:hidden;
+    box-shadow:0 0 0 12px #1a1a1c, 0 0 0 14px #2a2a2e, 0 40px 80px rgba(0,0,0,.6);
+  }
+  .notch { position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:160px; height:30px; background:#1a1a1c; border-radius:0 0 20px 20px; z-index:50; }
+  .statusbar { position:absolute; top:0; left:0; right:0; height:50px; z-index:40;
+    display:flex; align-items:center; justify-content:space-between; padding:14px 30px 0; font-size:13px; font-weight:600; }
+  .screen { position:absolute; inset:0; padding-top:50px; padding-bottom:84px; display:flex; flex-direction:column; }
+  .navbar { padding:6px 20px 12px; display:flex; align-items:center; justify-content:space-between; }
+  .navbar h1 { margin:0; font-size:30px; font-weight:800; letter-spacing:-.5px; }
+  .navbar .accent { color:var(--accent); }
+  .content { flex:1; overflow-y:auto; padding:0 16px 16px; }
+  .content::-webkit-scrollbar { width:0; }
+
+  /* Tab bar */
+  .tabbar { position:absolute; bottom:0; left:0; right:0; height:84px; z-index:40;
+    background:rgba(10,18,40,.92); backdrop-filter:blur(18px);
+    border-top:1px solid rgba(255,255,255,.07);
+    display:flex; justify-content:space-around; align-items:flex-start; padding-top:10px; }
+  .tab { background:none; border:none; color:var(--muted); font-size:10px; font-weight:600;
+    display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; width:62px; }
+  .tab svg { width:24px; height:24px; }
+  .tab.active { color:var(--accent); }
+
+  /* Cards & bits */
+  .card { background:var(--card); border:1px solid rgba(255,255,255,.06); border-radius:18px; padding:16px; margin-bottom:12px; }
+  .row { display:flex; align-items:center; gap:12px; }
+  .spacer { flex:1; }
+  .muted { color:var(--muted); }
+  .small { font-size:12px; }
+  .big { font-size:34px; font-weight:800; letter-spacing:-1px; }
+  .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600;
+    background:rgba(110,231,208,.14); color:var(--accent); }
+  .pill.gray { background:rgba(255,255,255,.08); color:var(--muted); }
+  .pill.warn { background:rgba(255,200,80,.16); color:#ffd166; }
+  button.primary { background:linear-gradient(180deg,var(--accent),var(--accent2)); color:#06231e;
+    border:none; border-radius:14px; padding:13px; font-size:16px; font-weight:700; width:100%; cursor:pointer; }
+  button.primary:disabled { opacity:.5; cursor:default; }
+  button.ghost { background:rgba(255,255,255,.08); color:var(--text); border:none; border-radius:12px;
+    padding:9px 14px; font-weight:600; cursor:pointer; }
+  input, select { width:100%; background:var(--card2); border:1px solid rgba(255,255,255,.08);
+    color:var(--text); border-radius:12px; padding:12px; font-size:15px; margin-top:6px; }
+  label.fld { display:block; margin-bottom:12px; font-size:12px; color:var(--muted); font-weight:600; }
+  .seg { display:flex; background:var(--card2); border-radius:12px; padding:4px; gap:4px; margin-bottom:14px; }
+  .seg button { flex:1; background:none; border:none; color:var(--muted); padding:8px; border-radius:9px;
+    font-size:13px; font-weight:600; cursor:pointer; }
+  .seg button.active { background:var(--accent); color:#06231e; }
+  .statgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .statbox { background:var(--card); border-radius:16px; padding:16px; text-align:center; }
+  .statbox .n { font-size:30px; font-weight:800; }
+  .statbox .l { font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+  .avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,var(--accent),#5a8dee);
+    display:flex; align-items:center; justify-content:center; font-weight:800; color:#06231e; flex-shrink:0; }
+  .rank { width:30px; text-align:center; font-weight:800; font-size:18px; }
+  .rank.gold{color:#ffd700} .rank.silver{color:#cdd7e5} .rank.bronze{color:#e0995e}
+  .badge { display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; opacity:.4; }
+  .badge.earned { opacity:1; }
+  .badge .ic { width:54px; height:54px; border-radius:16px; background:var(--card2);
+    display:flex; align-items:center; justify-content:center; font-size:26px; }
+  .badge.earned .ic { background:linear-gradient(135deg,rgba(110,231,208,.3),rgba(90,141,238,.3)); border:1px solid var(--accent); }
+  .badgegrid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  #map { height:300px; border-radius:18px; overflow:hidden; margin-bottom:12px; }
+  .leaflet-container { background:#0e1a38; }
+  .empty { text-align:center; color:var(--muted); padding:40px 20px; font-size:14px; }
+  .toast { position:absolute; bottom:96px; left:16px; right:16px; z-index:60; background:#22386a;
+    border:1px solid var(--accent); border-radius:12px; padding:12px 14px; font-size:13px; text-align:center;
+    opacity:0; transition:opacity .25s; pointer-events:none; }
+  .toast.show { opacity:1; }
+  .spin { width:16px; height:16px; border:2px solid rgba(255,255,255,.25); border-top-color:var(--accent);
+    border-radius:50%; display:inline-block; animation:sp 0.8s linear infinite; vertical-align:middle; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .modal { position:absolute; inset:0; z-index:70; background:rgba(6,10,22,.6); backdrop-filter:blur(4px);
+    display:flex; align-items:flex-end; }
+  .sheet { background:var(--bg1); width:100%; border-radius:24px 24px 0 0; padding:20px 18px 28px; max-height:88%; overflow-y:auto; }
+  .sheet h2 { margin:4px 0 18px; }
+  .hide { display:none !important; }
+  .sidehelp { color:#7e8aa6; max-width:300px; font-size:13px; line-height:1.6; }
+  .sidehelp h3 { color:#cdd7e5; }
+  .sidehelp code { background:#1b2c52; padding:2px 6px; border-radius:6px; color:var(--accent); font-size:12px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span id="clock">9:41</span><span>TrekRank ▲▲▲ ▮▮</span></div>
+
+  <!-- ===== AUTH SCREEN ===== -->
+  <div class="screen" id="authScreen">
+    <div class="navbar"><h1>Trek<span class="accent">Rank</span></h1></div>
+    <div class="content">
+      <p class="muted small" style="margin:0 0 18px">Log trips · auto-distance · climb leaderboards · earn badges.</p>
+      <div class="seg">
+        <button id="segLogin" class="active" onclick="setAuthMode('login')">Log in</button>
+        <button id="segReg" onclick="setAuthMode('register')">Register</button>
+      </div>
+      <div class="card">
+        <div id="regFields">
+          <label class="fld">Username<input id="auUsername" placeholder="globetrotter" /></label>
+          <label class="fld">Display name<input id="auDisplay" placeholder="Alex Rivera" /></label>
+        </div>
+        <label class="fld">Email<input id="auEmail" type="email" placeholder="you@email.com" /></label>
+        <label class="fld">Password<input id="auPassword" type="password" placeholder="••••••••" /></label>
+        <button class="primary" id="authBtn" onclick="doAuth()">Create account</button>
+        <p id="authErr" class="small" style="color:var(--danger);margin:12px 0 0"></p>
+      </div>
+      <p class="muted small" style="text-align:center">API: <span id="apiLabel"></span></p>
+    </div>
+  </div>
+
+  <!-- ===== MAIN APP ===== -->
+  <div class="screen hide" id="appScreen">
+    <div class="navbar">
+      <h1 id="navTitle">Feed</h1>
+      <div id="navAction"></div>
+    </div>
+    <div class="content" id="tabContent"></div>
+  </div>
+
+  <div class="tabbar hide" id="tabbar">
+    <button class="tab active" data-tab="feed" onclick="go('feed')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Feed</button>
+    <button class="tab" data-tab="trips" onclick="go('trips')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7"/></svg>Trips</button>
+    <button class="tab" data-tab="board" onclick="go('board')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 20V10M12 20V4M18 20v-6"/></svg>Board</button>
+    <button class="tab" data-tab="map" onclick="go('map')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/></svg>Map</button>
+    <button class="tab" data-tab="profile" onclick="go('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<div class="sidehelp">
+  <h3>TrekRank — live web preview</h3>
+  <p>This browser UI mirrors the SwiftUI iOS app and talks to the real FastAPI backend on
+     <code id="apiLabel2"></code>.</p>
+  <p><b>Try it:</b></p>
+  <ol style="padding-left:18px;line-height:1.9">
+    <li>Register a user.</li>
+    <li><b>Trips → +</b> add a trip (e.g. <code>Toronto, CA → Tokyo, JP</code>).</li>
+    <li>Watch the Celery worker geocode &amp; compute distance (status flips to <code>done</code>).</li>
+    <li>Check <b>Profile</b> for stats + auto-earned badges, <b>Map</b> for the world map, <b>Board</b> for the global leaderboard.</li>
+    <li>Generate a share card from Profile.</li>
+  </ol>
+  <p class="small">The native iOS app lives in <code>ios/TrekRank/</code> — project generated at
+     <code>TrekRank.xcodeproj</code> (open in Xcode, ⌘R for the Simulator).</p>
+</div>
+
+<script>
+const API = (localStorage.getItem('trk_api') || 'http://127.0.0.1:8001') + '/api/v1';
+const MEDIA_BASE = (localStorage.getItem('trk_api') || 'http://127.0.0.1:8001');
+document.getElementById('apiLabel').textContent = API;
+document.getElementById('apiLabel2').textContent = API;
+
+let state = { token:null, user:null, authMode:'register', tab:'feed', map:null };
+
+function clock(){ const d=new Date(); document.getElementById('clock').textContent =
+  d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
+clock(); setInterval(clock, 10000);
+
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600); }
+
+// ---- API helper ----
+async function api(path, {method='GET', body=null, auth=true} = {}){
+  const headers = {'Content-Type':'application/json'};
+  if (auth && state.token) headers['Authorization'] = 'Bearer '+state.token;
+  const res = await fetch(API+path, {method, headers, body: body?JSON.stringify(body):null});
+  const text = await res.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch(e){ data = text; }
+  if (!res.ok) throw new Error((data && data.detail) ? JSON.stringify(data.detail) : ('HTTP '+res.status+' '+text));
+  return data;
+}
+
+// ---- Auth ----
+function setAuthMode(m){
+  state.authMode = m;
+  document.getElementById('segLogin').classList.toggle('active', m==='login');
+  document.getElementById('segReg').classList.toggle('active', m==='register');
+  document.getElementById('regFields').classList.toggle('hide', m==='login');
+  document.getElementById('authBtn').textContent = m==='login' ? 'Log in' : 'Create account';
+}
+async function doAuth(){
+  const err = document.getElementById('authErr'); err.textContent='';
+  const btn = document.getElementById('authBtn'); btn.disabled=true;
+  const email = document.getElementById('auEmail').value.trim();
+  const password = document.getElementById('auPassword').value;
+  try {
+    let res;
+    if (state.authMode==='register'){
+      res = await api('/auth/register', {auth:false, method:'POST', body:{
+        email, password,
+        username: document.getElementById('auUsername').value.trim(),
+        display_name: document.getElementById('auDisplay').value.trim()
+      }});
+    } else {
+      res = await api('/auth/login', {auth:false, method:'POST', body:{email, password}});
+    }
+    state.token = res.access_token; state.user = res.user;
+    localStorage.setItem('trk_token', res.access_token);
+    enterApp();
+  } catch(e){ err.textContent = e.message; }
+  btn.disabled=false;
+}
+function logout(){ state.token=null; state.user=null; localStorage.removeItem('trk_token');
+  document.getElementById('appScreen').classList.add('hide');
+  document.getElementById('tabbar').classList.add('hide');
+  document.getElementById('authScreen').classList.remove('hide'); }
+
+function enterApp(){
+  document.getElementById('authScreen').classList.add('hide');
+  document.getElementById('appScreen').classList.remove('hide');
+  document.getElementById('tabbar').classList.remove('hide');
+  go('feed');
+}
+
+// ---- Router ----
+const TITLES = {feed:'Feed', trips:'Trips', board:'Leaderboard', map:'World Map', profile:'Profile'};
+function go(tab){
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  document.getElementById('navTitle').textContent = TITLES[tab];
+  const act = document.getElementById('navAction');
+  act.innerHTML = tab==='trips' ? '<button class="ghost" onclick="openAddTrip()">＋ Add</button>'
+    : tab==='profile' ? '<button class="ghost" onclick="logout()">Log out</button>' : '';
+  renderTab(tab);
+}
+async function renderTab(tab){
+  const c = document.getElementById('tabContent');
+  c.innerHTML = '<div class="empty"><span class="spin"></span> Loading…</div>';
+  try {
+    if (tab==='feed') await renderFeed(c);
+    else if (tab==='trips') await renderTrips(c);
+    else if (tab==='board') await renderBoard(c);
+    else if (tab==='map') await renderMap(c);
+    else if (tab==='profile') await renderProfile(c);
+  } catch(e){ c.innerHTML = '<div class="empty">⚠️ '+e.message+'</div>'; }
+}
+
+// ---- Feed ----
+let feedScope = 'me';
+async function renderFeed(c){
+  const data = await api(feedScope==='me' ? '/feed/me' : '/feed');
+  const items = data.items || [];
+  let html = `<div class="seg">
+      <button class="${feedScope==='me'?'active':''}" onclick="feedScope='me';renderTab('feed')">My activity</button>
+      <button class="${feedScope==='friends'?'active':''}" onclick="feedScope='friends';renderTab('feed')">Friends</button>
+    </div>`;
+  if (!items.length){ html += `<div class="empty">No activity yet.${feedScope==='friends'?' Add friends to see theirs.':' Add a trip to get started!'}</div>`;
+    c.innerHTML = html; return; }
+  for (const it of items){
+    const u = it.user || {};
+    let line = '', emoji = '✈️';
+    if (it.event_type==='new_trip' && it.trip){ emoji='✈️';
+      line = `logged a trip to <b>${it.trip.dest_city}, ${it.trip.dest_country}</b>` + (it.trip.distance_km?` · ${fmt(it.trip.distance_km)} km`:''); }
+    else if (it.event_type==='badge_earned' && it.badge){ emoji='🏅';
+      line = `earned the <b>${it.badge.name}</b> badge`; }
+    else { line = it.event_type.replace('_',' '); }
+    html += `<div class="card row">
+      <div class="avatar">${initials(u.display_name||u.username)}</div>
+      <div><div><b>${u.display_name||u.username}</b></div>
+        <div class="small muted">${emoji} ${line}</div>
+        <div class="small muted">${timeago(it.created_at)}</div></div></div>`;
+  }
+  c.innerHTML = html;
+}
+
+// ---- Trips ----
+async function renderTrips(c){
+  const data = await api('/trips');
+  const items = data.items || [];
+  if (!items.length){ c.innerHTML = '<div class="empty">No trips yet.<br>Tap <b>＋ Add</b> to log your first trip.</div>'; return; }
+  let html = '';
+  for (const t of items){
+    const statusPill = t.status==='done' ? `<span class="pill">${fmt(t.distance_km)} km</span>`
+      : t.status==='failed' ? `<span class="pill warn">failed</span>`
+      : `<span class="pill gray"><span class="spin"></span> ${t.status}</span>`;
+    const route = (t.origin_city ? `${t.origin_city} → ` : '') + `${t.dest_city}, ${t.dest_country}`;
+    html += `<div class="card">
+      <div class="row"><div><b>${t.title || route}</b>
+        <div class="small muted">${modeEmoji(t.transport_mode)} ${route} · ${t.start_date}</div></div>
+        <div class="spacer"></div>${statusPill}</div></div>`;
+  }
+  c.innerHTML = html;
+}
+
+function openAddTrip(){
+  const m = document.createElement('div'); m.className='modal'; m.id='addModal';
+  m.innerHTML = `<div class="sheet">
+    <div class="row"><h2>New Trip</h2><div class="spacer"></div><button class="ghost" onclick="closeAddTrip()">✕</button></div>
+    <label class="fld">Title (optional)<input id="tTitle" placeholder="Summer in Japan"/></label>
+    <div class="row" style="gap:10px">
+      <label class="fld" style="flex:1">Origin city<input id="tOCity" placeholder="Toronto"/></label>
+      <label class="fld" style="width:110px">Country<input id="tOCountry" placeholder="CA" maxlength="2"/></label>
+    </div>
+    <div class="row" style="gap:10px">
+      <label class="fld" style="flex:1">Destination city<input id="tDCity" placeholder="Tokyo"/></label>
+      <label class="fld" style="width:110px">Country<input id="tDCountry" placeholder="JP" maxlength="2"/></label>
+    </div>
+    <label class="fld">Transport
+      <select id="tMode">${['flight','train','car','bus','boat','bike','walk','other'].map(x=>`<option>${x}</option>`).join('')}</select></label>
+    <label class="fld">Start date<input id="tDate" type="date" value="${new Date().toISOString().slice(0,10)}"/></label>
+    <button class="primary" id="saveTrip" onclick="saveTrip()">Save trip</button>
+    <p id="tripErr" class="small" style="color:var(--danger)"></p>
+  </div>`;
+  document.querySelector('.phone').appendChild(m);
+}
+function closeAddTrip(){ const m=document.getElementById('addModal'); if(m) m.remove(); }
+async function saveTrip(){
+  const err=document.getElementById('tripErr'); err.textContent='';
+  const dCity=document.getElementById('tDCity').value.trim();
+  const dCountry=document.getElementById('tDCountry').value.trim().toUpperCase();
+  if(!dCity || dCountry.length!==2){ err.textContent='Destination city + 2-letter country required.'; return; }
+  const btn=document.getElementById('saveTrip'); btn.disabled=true; btn.textContent='Saving…';
+  const oCity=document.getElementById('tOCity').value.trim();
+  try {
+    const trip = await api('/trips', {method:'POST', body:{
+      title: document.getElementById('tTitle').value.trim() || null,
+      origin_city: oCity || null,
+      origin_country: (document.getElementById('tOCountry').value.trim().toUpperCase()) || null,
+      dest_city: dCity, dest_country: dCountry,
+      transport_mode: document.getElementById('tMode').value,
+      start_date: document.getElementById('tDate').value,
+      is_public: true
+    }});
+    closeAddTrip(); go('trips');
+    toast('Trip created — worker computing distance…');
+    pollTrip(trip.id);
+  } catch(e){ err.textContent=e.message; btn.disabled=false; btn.textContent='Save trip'; }
+}
+async function pollTrip(id){
+  for (let i=0;i<20;i++){
+    await new Promise(r=>setTimeout(r,1500));
+    try {
+      const t = await api('/trips/'+id);
+      if (t.status!=='processing' && t.status!=='pending'){
+        if (state.tab==='trips') renderTab('trips');
+        toast(t.status==='done' ? `✅ ${t.dest_city}: ${fmt(t.distance_km)} km` : `Trip ${t.status}`);
+        return;
+      }
+      if (state.tab==='trips') renderTab('trips');
+    } catch(e){ /* keep polling */ }
+  }
+}
+
+// ---- Leaderboard ----
+let boardScope='global', boardMetric='km';
+async function renderBoard(c){
+  const metrics=[['km','Distance'],['countries','Countries'],['cities','Cities'],['trips','Trips']];
+  const path = boardScope==='global' ? `/leaderboards/global?metric=${boardMetric}`
+    : `/leaderboards/friends?metric=${boardMetric}&period=${new Date().getFullYear()}`;
+  const data = await api(path);
+  let html = `<div class="seg">
+      <button class="${boardScope==='global'?'active':''}" onclick="boardScope='global';renderTab('board')">Global</button>
+      <button class="${boardScope==='friends'?'active':''}" onclick="boardScope='friends';renderTab('board')">Friends</button>
+    </div>
+    <div class="seg">${metrics.map(([k,l])=>`<button class="${boardMetric===k?'active':''}" onclick="boardMetric='${k}';renderTab('board')">${l}</button>`).join('')}</div>`;
+  const rk = data.rankings || [];
+  if (!rk.length){ html += '<div class="empty">No rankings yet. Add a trip to appear here.</div>'; c.innerHTML=html; return; }
+  for (const e of rk){
+    const u=e.user||{}; const rc = e.rank===1?'gold':e.rank===2?'silver':e.rank===3?'bronze':'';
+    const mine = state.user && u.username===state.user.username;
+    html += `<div class="card row" ${mine?'style="border-color:var(--accent)"':''}>
+      <div class="rank ${rc}">${e.rank}</div>
+      <div class="avatar">${initials(u.display_name||u.username)}</div>
+      <div><b>${u.display_name||u.username}</b> ${mine?'<span class="pill">you</span>':''}
+        <div class="small muted">@${u.username}</div></div>
+      <div class="spacer"></div>
+      <div style="text-align:right"><b>${boardMetric==='km'?fmt(e.value)+' km':Math.round(e.value)}</b></div></div>`;
+  }
+  if (data.my_rank) html += `<p class="muted small" style="text-align:center">Your rank: #${data.my_rank}</p>`;
+  c.innerHTML = html;
+}
+
+// ---- Map ----
+async function renderMap(c){
+  const data = await api(`/users/${state.user.username}/map`);
+  const cities=(data.cities||[]).filter(x=>x.lat!=null && x.lng!=null);
+  c.innerHTML = `<div id="map"></div>
+    <div class="card"><b>${(data.countries||[]).length}</b> countries · <b>${(data.cities||[]).length}</b> cities visited</div>
+    ${(data.cities||[]).map(ci=>`<div class="card row"><div class="avatar">📍</div>
+        <div><b>${ci.name}</b><div class="small muted">${ci.country_code} · ${ci.visits} visit${ci.visits>1?'s':''}</div></div></div>`).join('')
+      || '<div class="empty">No places yet — add a trip with a destination.</div>'}`;
+  setTimeout(()=>{
+    if (state.map){ state.map.remove(); state.map=null; }
+    const m = L.map('map', {attributionControl:false, zoomControl:true}).setView([20,0], 1);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:19}).addTo(m);
+    const pts=[];
+    for (const ci of cities){
+      L.circleMarker([ci.lat, ci.lng], {radius:7, color:'#6ee7d0', fillColor:'#6ee7d0', fillOpacity:.9, weight:2})
+        .addTo(m).bindPopup(`<b>${ci.name}</b><br>${ci.country_code}`);
+      pts.push([ci.lat, ci.lng]);
+    }
+    if (pts.length) m.fitBounds(pts, {padding:[40,40], maxZoom:5});
+    state.map = m;
+  }, 60);
+}
+
+// ---- Profile ----
+async function renderProfile(c){
+  const [me, stats, badges] = await Promise.all([
+    api('/users/me'), api(`/users/${state.user.username}/stats`), api('/badges/me')
+  ]);
+  const earned = badges.filter(b=>b.earned).length;
+  let html = `<div class="card row">
+      <div class="avatar" style="width:56px;height:56px;font-size:22px">${initials(me.display_name)}</div>
+      <div><div style="font-size:20px;font-weight:800">${me.display_name}</div>
+        <div class="small muted">@${me.username}</div></div></div>
+    <div class="statgrid">
+      <div class="statbox"><div class="n">${stats.total_countries}</div><div class="l">Countries</div></div>
+      <div class="statbox"><div class="n">${stats.total_cities}</div><div class="l">Cities</div></div>
+      <div class="statbox"><div class="n">${fmt(stats.total_km)}</div><div class="l">Km traveled</div></div>
+      <div class="statbox"><div class="n">${stats.total_trips}</div><div class="l">Trips</div></div>
+    </div>
+    <div class="card row"><div>🔥 Current streak</div><div class="spacer"></div><b>${stats.current_streak}</b></div>
+    ${stats.continents_visited && stats.continents_visited.length ? `<div class="card"><div class="small muted">Continents</div>${stats.continents_visited.map(x=>`<span class="pill" style="margin:4px 4px 0 0">${x}</span>`).join('')}</div>`:''}
+    <h3 style="margin:18px 4px 10px">Badges <span class="muted small">${earned}/${badges.length}</span></h3>
+    <div class="badgegrid">${badges.map(b=>`<div class="badge ${b.earned?'earned':''}" title="${b.description}">
+        <div class="ic">${badgeEmoji(b.id)}</div><div class="small" style="font-size:10px">${b.name}</div></div>`).join('')}</div>
+    <div style="margin:20px 0"><button class="primary" onclick="makeShareCard()">📸 Generate share card</button></div>
+    <div id="shareOut"></div>`;
+  c.innerHTML = html;
+}
+async function makeShareCard(){
+  const out=document.getElementById('shareOut'); out.innerHTML='<div class="empty"><span class="spin"></span> Rendering 1080×1920 card…</div>';
+  try {
+    const res = await api('/share/card', {method:'POST', body:{card_type:'year_recap', year:new Date().getFullYear()}});
+    let url = res.image_url; if (url && url.startsWith('/')) url = MEDIA_BASE+url;
+    out.innerHTML = `<div class="card"><img src="${url}" style="width:100%;border-radius:12px" /></div>`;
+  } catch(e){ out.innerHTML='<div class="empty">⚠️ '+e.message+'</div>'; }
+}
+
+// ---- helpers ----
+function fmt(n){ return n==null?'—':Math.round(n).toLocaleString(); }
+function initials(s){ if(!s) return '?'; return s.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase(); }
+function modeEmoji(m){ return {flight:'✈️',train:'🚆',car:'🚗',bus:'🚌',boat:'⛴️',bike:'🚲',walk:'🚶'}[m]||'🧭'; }
+function badgeEmoji(id){ const map={first_trip:'🎒',ten_k_km:'🌍',first_flight:'✈️',hundred_k_km:'🚀',
+  five_countries:'🗺️',ten_countries:'🌎',globetrotter:'🌐',streak_7:'🔥',streak_30:'⚡',
+  early_bird:'🐦',night_owl:'🦉',explorer:'🧭',continent_hopper:'🛫'}; return map[id]||'🏅'; }
+function timeago(iso){ if(!iso) return ''; const d=new Date(iso); const s=(Date.now()-d)/1000;
+  if(s<60)return'just now'; if(s<3600)return Math.floor(s/60)+'m ago'; if(s<86400)return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago'; }
+
+// ---- boot: resume session if token present ----
+(async function(){
+  setAuthMode('register');
+  const t = localStorage.getItem('trk_token');
+  if (t){ state.token=t; try { const me=await api('/users/me'); state.user=me; enterApp(); }
+    catch(e){ localStorage.removeItem('trk_token'); } }
+})();
+</script>
+</body>
+</html>
