@@ -37,6 +37,11 @@ def create_refresh_token(user_id: str) -> str:
     return _create_token(user_id, settings.refresh_token_expire_minutes, "refresh")
 
 
+def create_reset_token(user_id: str) -> str:
+    """Short-lived token used to authorize a password reset."""
+    return _create_token(user_id, 15, "reset")
+
+
 def decode_token(token: str, expected_type: str | None = None) -> dict | None:
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])

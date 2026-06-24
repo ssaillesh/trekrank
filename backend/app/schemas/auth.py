@@ -25,6 +25,22 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    # In production this token is emailed to the user. There is no email
+    # service in this local instance, so it is returned directly.
+    reset_token: str | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str
+    new_password: str = Field(min_length=6, max_length=128)
+
+
 class AuthUser(BaseModel):
     id: str
     username: str

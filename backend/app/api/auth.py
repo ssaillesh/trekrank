@@ -9,9 +9,11 @@ from app.models import User
 from app.middleware.auth import get_current_user
 from app.schemas.auth import (
     RegisterRequest, LoginRequest, AppleAuthRequest, RefreshRequest, TokenResponse, AuthUser,
+    ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest,
 )
 from app.services.security import (
     hash_password, verify_password, create_access_token, create_refresh_token, decode_token,
+    create_reset_token,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -103,6 +105,36 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)):
     user = db.get(User, uuid.UUID(payload["sub"]))
     if not user:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
+    return _tokens(user, is_new=False)
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Begin a password reset.
+
+    Always responds 200 so the endpoint can't be used to probe which emails are
+    registered. In production the reset token would be emailed; with no email
+    service in this local instance, it's returned in the response when the
+    account exists.
+    """
+    user = db.scalar(select(User).where(User.email == body.email))
+    generic = "If an account exists for that email, a reset token has been issued."
+    if not user:
+        return ForgotPasswordResponse(message=generic)
+    return ForgotPasswordResponse(message=generic, reset_token=create_reset_token(str(user.id)))
+
+
+@router.post("/reset-password", response_model=TokenResponse)
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    payload = decode_token(body.reset_token, expected_type="reset")
+    if not payload:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired reset token")
+    user = db.get(User, uuid.UUID(payload["sub"]))
+    if not user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    db.refresh(user)
     return _tokens(user, is_new=False)
 
 

@@ -1,0 +1,12 @@
+{
+	admin off
+	auto_https off
+}
+
+# Railway injects $PORT; fall back to 8080 for local `docker run`.
+:{$PORT:8080} {
+	root * /srv
+	file_server
+	try_files {path} /index.html
+	encode gzip
+}

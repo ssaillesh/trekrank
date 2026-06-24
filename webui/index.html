@@ -127,7 +127,9 @@
         <label class="fld">Email<input id="auEmail" type="email" placeholder="you@email.com" /></label>
         <label class="fld">Password<input id="auPassword" type="password" placeholder="••••••••" /></label>
         <button class="primary" id="authBtn" onclick="doAuth()">Create account</button>
+        <p id="forgotLink" class="small hide" style="text-align:center;margin:12px 0 0"><a href="#" onclick="forgotPassword();return false;">Forgot password?</a></p>
         <p id="authErr" class="small" style="color:var(--danger);margin:12px 0 0"></p>
+        <p id="authOk" class="small" style="color:var(--accent,#2a8);margin:8px 0 0"></p>
       </div>
       <p class="muted small" style="text-align:center">API: <span id="apiLabel"></span></p>
     </div>
@@ -175,8 +177,13 @@
 </div>
 
 <script>
-const API = (localStorage.getItem('trk_api') || 'http://127.0.0.1:8001') + '/api/v1';
-const MEDIA_BASE = (localStorage.getItem('trk_api') || 'http://127.0.0.1:8001');
+// Default to the local backend when developing on localhost, otherwise the
+// deployed Railway backend. A `trk_api` localStorage value overrides both.
+const _isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
+const _defaultApi = _isLocal ? 'http://127.0.0.1:8001' : 'https://trekrank.up.railway.app';
+const API_BASE = localStorage.getItem('trk_api') || _defaultApi;
+const API = API_BASE + '/api/v1';
+const MEDIA_BASE = API_BASE;
 document.getElementById('apiLabel').textContent = API;
 document.getElementById('apiLabel2').textContent = API;
 
@@ -207,6 +214,27 @@ function setAuthMode(m){
   document.getElementById('segReg').classList.toggle('active', m==='register');
   document.getElementById('regFields').classList.toggle('hide', m==='login');
   document.getElementById('authBtn').textContent = m==='login' ? 'Log in' : 'Create account';
+  document.getElementById('forgotLink').classList.toggle('hide', m!=='login');
+}
+
+async function forgotPassword(){
+  const err = document.getElementById('authErr'); err.textContent='';
+  const ok = document.getElementById('authOk'); ok.textContent='';
+  const email = document.getElementById('auEmail').value.trim();
+  if (!email){ err.textContent='Enter your email above first.'; return; }
+  try {
+    const res = await api('/auth/forgot-password', {auth:false, method:'POST', body:{email}});
+    if (!res.reset_token){ ok.textContent = res.message; return; }
+    // No email service in this instance — token is returned directly.
+    const newPw = prompt('Reset token issued. Enter a new password (min 6 chars):');
+    if (!newPw){ return; }
+    const r = await api('/auth/reset-password', {auth:false, method:'POST', body:{
+      reset_token: res.reset_token, new_password: newPw
+    }});
+    state.token = r.access_token; state.user = r.user;
+    localStorage.setItem('trk_token', r.access_token);
+    enterApp();
+  } catch(e){ err.textContent = e.message; }
 }
 async function doAuth(){
   const err = document.getElementById('authErr'); err.textContent='';
