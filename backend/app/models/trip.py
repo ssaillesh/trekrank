@@ -28,16 +28,14 @@ class Trip(Base):
     # origin
     origin_city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     origin_country: Mapped[str | None] = mapped_column(CHAR(2), nullable=True)
-    origin_coords = mapped_column(
-        Geography(geometry_type="POINT", srid=4326, spatial_index=True), nullable=True
-    )
+    origin_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    origin_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # destination
     dest_city: Mapped[str] = mapped_column(String(100), nullable=False)
     dest_country: Mapped[str] = mapped_column(CHAR(2), nullable=False, index=True)
-    dest_coords = mapped_column(
-        Geography(geometry_type="POINT", srid=4326, spatial_index=True), nullable=True
-    )
+    dest_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dest_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     start_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)

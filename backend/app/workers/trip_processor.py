@@ -6,29 +6,18 @@ Redis leaderboards, insert an activity-feed entry, then evaluate badges.
 """
 import uuid
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models import Trip, User, VisitedCountry, VisitedCity
 from app.data.countries import country_name
 from app.services.geocoding import geocode
-from app.services.distance import distance_km_postgis
+from app.services.distance import distance_km
 from app.services.stats import recalculate_user_stats
 from app.services import leaderboard
 from app.models import ActivityFeed
 from app.workers.celery_app import celery
-
-
-def _set_point(db: Session, table: str, row_id, lat: float, lng: float, column: str) -> None:
-    """Persist a lat/lng as a PostGIS GEOGRAPHY(POINT, 4326)."""
-    db.execute(
-        text(
-            f"UPDATE {table} SET {column} = ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography "
-            f"WHERE id = :id"
-        ),
-        {"lng": lng, "lat": lat, "id": row_id},
-    )
 
 
 def _upsert_visited(db: Session, trip: Trip, dest_latlng: tuple[float, float] | None) -> None:
@@ -72,10 +61,10 @@ def _upsert_visited(db: Session, trip: Trip, dest_latlng: tuple[float, float] | 
             first_visited=trip.start_date,
             visit_count=1,
         )
+        if dest_latlng:
+            new_city.lat, new_city.lng = dest_latlng[0], dest_latlng[1]
         db.add(new_city)
         db.flush()
-        if dest_latlng:
-            _set_point(db, "visited_cities", new_city.id, dest_latlng[0], dest_latlng[1], "coords")
     db.flush()
 
 
@@ -94,16 +83,15 @@ def process_trip_sync(trip_id: str) -> None:
         if not origin and user and user.home_city:
             origin = geocode(user.home_city, user.home_country)
 
-        # 2/3. Coordinates (PostGIS geography) + distance via ST_Distance
+        # 2/3. Coordinates (plain lat/lng) + distance via Haversine
         trip.status = "done"
-        db.add(trip)
-        db.flush()
         if dest:
-            _set_point(db, "trips", trip.id, dest[0], dest[1], "dest_coords")
+            trip.dest_lat, trip.dest_lng = dest[0], dest[1]
         if origin:
-            _set_point(db, "trips", trip.id, origin[0], origin[1], "origin_coords")
+            trip.origin_lat, trip.origin_lng = origin[0], origin[1]
         if origin and dest:
-            trip.distance_km = distance_km_postgis(db, origin[0], origin[1], dest[0], dest[1])
+            trip.distance_km = distance_km(origin[0], origin[1], dest[0], dest[1])
+        db.add(trip)
         db.flush()
 
         # 4. Visited tables

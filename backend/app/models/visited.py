@@ -1,8 +1,7 @@
 import uuid
 from datetime import date
 
-from geoalchemy2 import Geography
-from sqlalchemy import String, Integer, Date, CHAR, ForeignKey, UniqueConstraint
+from sqlalchemy import String, Integer, Date, CHAR, Float, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -37,8 +36,7 @@ class VisitedCity(Base):
     )
     city_name: Mapped[str] = mapped_column(String(100), nullable=False)
     country_code: Mapped[str] = mapped_column(CHAR(2), nullable=False)
-    coords = mapped_column(
-        Geography(geometry_type="POINT", srid=4326, spatial_index=True), nullable=True
-    )
+    lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lng: Mapped[float | None] = mapped_column(Float, nullable=True)
     first_visited: Mapped[date] = mapped_column(Date, nullable=False)
     visit_count: Mapped[int] = mapped_column(Integer, default=1)

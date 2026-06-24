@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -76,15 +76,9 @@ def get_map(username: str, db: Session = Depends(get_db)):
     countries = db.execute(
         select(VisitedCountry).where(VisitedCountry.user_id == user.id)
     ).scalars().all()
-    # Extract lat/lng from the PostGIS geography column.
-    city_rows = db.execute(
-        text(
-            "SELECT city_name, country_code, visit_count, "
-            "ST_Y(coords::geometry) AS lat, ST_X(coords::geometry) AS lng "
-            "FROM visited_cities WHERE user_id = :uid"
-        ),
-        {"uid": str(user.id)},
-    ).mappings().all()
+    cities = db.execute(
+        select(VisitedCity).where(VisitedCity.user_id == user.id)
+    ).scalars().all()
     return UserMap(
         countries=[
             MapCountry(code=c.country_code, name=c.country_name,
@@ -92,8 +86,8 @@ def get_map(username: str, db: Session = Depends(get_db)):
             for c in countries
         ],
         cities=[
-            MapCity(name=r["city_name"], country_code=r["country_code"],
-                    lat=r["lat"], lng=r["lng"], visits=r["visit_count"])
-            for r in city_rows
+            MapCity(name=c.city_name, country_code=c.country_code,
+                    lat=c.lat, lng=c.lng, visits=c.visit_count)
+            for c in cities
         ],
     )
