@@ -27,19 +27,27 @@ struct TripsView: View {
                 if vm.trips.isEmpty && !vm.loading {
                     ContentUnavailableView("No trips yet", systemImage: "airplane.departure",
                         description: Text("Tap + to log your first trip."))
+                        .listRowBackground(Color.clear)
                 }
                 ForEach(vm.trips) { trip in
                     TripRow(trip: trip)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 }
                 .onDelete { idx in
                     Task { for i in idx { await vm.delete(vm.trips[i]) } }
                 }
             }
             .listStyle(.plain)
+            .trekScreen()
             .navigationTitle("Trips")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showAdd = true } label: { Image(systemName: "plus") }
+                    Button { showAdd = true } label: {
+                        Image(systemName: "plus.circle.fill").font(.title2)
+                            .foregroundStyle(TrekTheme.accent)
+                    }
                 }
             }
             .sheet(isPresented: $showAdd) {
@@ -55,27 +63,30 @@ struct TripRow: View {
     let trip: Trip
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: transportIcon).font(.title3)
-                .foregroundStyle(TrekTheme.accent).frame(width: 30)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(trip.title ?? "\(trip.destCity), \(trip.destCountry)").font(.headline)
-                HStack(spacing: 6) {
-                    if let o = trip.originCity { Text(o); Image(systemName: "arrow.right").font(.caption2) }
-                    Text("\(trip.destCity), \(trip.destCountry)")
-                }.font(.subheadline).foregroundStyle(.secondary)
-                Text(trip.startDate).font(.caption2).foregroundStyle(.tertiary)
-            }
-            Spacer()
-            VStack(alignment: .trailing) {
-                if let km = trip.distanceKm {
-                    Text("\(Int(km)) km").font(.subheadline.bold()).foregroundStyle(TrekTheme.accent)
-                } else if trip.status == "processing" {
-                    ProgressView().controlSize(.small)
+        GlassCard {
+            HStack(spacing: 12) {
+                Image(systemName: transportIcon).font(.title3)
+                    .foregroundStyle(TrekTheme.accent).frame(width: 40, height: 40)
+                    .background(TrekTheme.accent.opacity(0.12), in: Circle())
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(trip.title ?? "\(trip.destCity), \(trip.destCountry)").font(.headline)
+                    HStack(spacing: 6) {
+                        if let o = trip.originCity { Text(o); Image(systemName: "arrow.right").font(.caption2) }
+                        Text("\(trip.destCity), \(trip.destCountry)")
+                    }.font(.subheadline).foregroundStyle(.secondary)
+                    Text(trip.startDate).font(.caption2).foregroundStyle(.tertiary)
+                }
+                Spacer()
+                VStack(alignment: .trailing) {
+                    if let km = trip.distanceKm {
+                        CountUpText(value: km, suffix: " km")
+                            .font(.subheadline.bold()).foregroundStyle(TrekTheme.accent)
+                    } else if trip.status == "processing" {
+                        ProgressView().controlSize(.small).tint(TrekTheme.accent)
+                    }
                 }
             }
         }
-        .padding(.vertical, 4)
     }
 
     private var transportIcon: String {

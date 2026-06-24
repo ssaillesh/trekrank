@@ -41,12 +41,17 @@ struct LeaderboardView: View {
                         ForEach(rankings) { entry in
                             LeaderboardRow(entry: entry, metric: vm.metric,
                                            isMe: entry.rank == vm.board?.myRank)
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
                         }
                     }
                 }
                 .listStyle(.plain)
-                .overlay { if vm.loading { ProgressView() } }
+                .scrollContentBackground(.hidden)
+                .overlay { if vm.loading { ProgressView().tint(TrekTheme.accent) } }
             }
+            .trekScreen()
             .navigationTitle("Leaderboard")
             .task { await vm.load() }
             .onChange(of: vm.scope) { _, _ in Task { await vm.load() } }
@@ -61,17 +66,35 @@ struct LeaderboardRow: View {
     let isMe: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
-            Text("#\(entry.rank)").font(.headline.monospacedDigit())
-                .foregroundStyle(medalColor).frame(width: 40, alignment: .leading)
-            Circle().fill(TrekTheme.accent.opacity(0.25))
-                .frame(width: 34, height: 34)
-                .overlay(Text(String(entry.user.username.prefix(1)).uppercased()).bold())
-            Text("@\(entry.user.username)").fontWeight(isMe ? .bold : .regular)
-            Spacer()
-            Text(valueText).font(.headline.monospacedDigit()).foregroundStyle(TrekTheme.accent)
+        GlassCard {
+            HStack(spacing: 14) {
+                ZStack {
+                    if entry.rank <= 3 {
+                        Image(systemName: "medal.fill").font(.title3).foregroundStyle(medalColor)
+                    } else {
+                        Text("#\(entry.rank)").font(.headline.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }.frame(width: 40, alignment: .leading)
+                Circle().fill(TrekTheme.accent.opacity(0.25))
+                    .frame(width: 36, height: 36)
+                    .overlay(Text(String(entry.user.username.prefix(1)).uppercased()).bold())
+                Text("@\(entry.user.username)").fontWeight(isMe ? .bold : .regular)
+                if isMe {
+                    Text("YOU").font(.caption2.bold()).padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(TrekTheme.accent.opacity(0.2), in: Capsule())
+                        .foregroundStyle(TrekTheme.accent)
+                }
+                Spacer()
+                Text(valueText).font(.headline.monospacedDigit()).foregroundStyle(TrekTheme.accent)
+            }
         }
-        .listRowBackground(isMe ? TrekTheme.accent.opacity(0.12) : Color.clear)
+        .overlay(alignment: .leading) {
+            if isMe {
+                RoundedRectangle(cornerRadius: 3).fill(TrekTheme.accent)
+                    .frame(width: 4).padding(.vertical, 10)
+            }
+        }
     }
 
     private var valueText: String {

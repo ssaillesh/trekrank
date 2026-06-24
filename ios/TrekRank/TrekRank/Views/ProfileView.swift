@@ -36,6 +36,7 @@ struct ProfileView: View {
                 }
                 .padding()
             }
+            .trekScreen()
             .navigationTitle("Profile")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -78,9 +79,13 @@ struct ProfileView: View {
 
     private var header: some View {
         VStack(spacing: 8) {
-            Circle().fill(TrekTheme.accent.opacity(0.25)).frame(width: 80, height: 80)
+            Circle()
+                .fill(LinearGradient(colors: [TrekTheme.accent, TrekTheme.accent2],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 86, height: 86)
                 .overlay(Text(String((session.profile?.username ?? "?").prefix(1)).uppercased())
-                    .font(.largeTitle.bold()))
+                    .font(.largeTitle.bold()).foregroundStyle(.black))
+                .shadow(color: TrekTheme.accent.opacity(0.5), radius: 16)
             Text(session.profile?.displayName ?? "").font(.title2.bold())
             Text("@\(session.profile?.username ?? "")").foregroundStyle(.secondary)
         }
@@ -89,12 +94,12 @@ struct ProfileView: View {
     private var statsGrid: some View {
         let p = session.profile
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            StatCard(value: "\(p?.totalCountries ?? 0)", label: "Countries", icon: "globe")
-            StatCard(value: "\(p?.totalCities ?? 0)", label: "Cities", icon: "building.2")
-            StatCard(value: "\(Int(p?.totalKm ?? 0))", label: "Km traveled", icon: "ruler")
-            StatCard(value: "\(p?.totalTrips ?? 0)", label: "Trips", icon: "airplane")
-            StatCard(value: "\(p?.currentStreak ?? 0)", label: "Current streak", icon: "flame")
-            StatCard(value: "\(p?.longestStreak ?? 0)", label: "Longest streak", icon: "crown")
+            StatCard(value: Double(p?.totalCountries ?? 0), label: "Countries", icon: "globe")
+            StatCard(value: Double(p?.totalCities ?? 0), label: "Cities", icon: "building.2")
+            StatCard(value: p?.totalKm ?? 0, suffix: " km", label: "Km traveled", icon: "ruler")
+            StatCard(value: Double(p?.totalTrips ?? 0), label: "Trips", icon: "airplane")
+            StatCard(value: Double(p?.currentStreak ?? 0), label: "Current streak", icon: "flame")
+            StatCard(value: Double(p?.longestStreak ?? 0), label: "Longest streak", icon: "crown")
         }
     }
 
@@ -107,10 +112,8 @@ struct ProfileView: View {
                     if vm.generatingCard { ProgressView().tint(.black) }
                     Label("Generate share card", systemImage: "square.and.arrow.up")
                 }
-                .frame(maxWidth: .infinity).padding()
-                .background(TrekTheme.accent).foregroundStyle(.black)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
+            .buttonStyle(NeonButtonStyle())
             if let url = vm.shareURL {
                 AsyncImage(url: url) { img in
                     img.resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 16))
@@ -146,14 +149,18 @@ struct ProfileView: View {
 }
 
 struct StatCard: View {
-    let value: String, label: String, icon: String
+    let value: Double
+    var suffix: String = ""
+    let label: String
+    let icon: String
     var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon).foregroundStyle(TrekTheme.accent)
-            Text(value).font(.title2.bold().monospacedDigit())
-            Text(label).font(.caption).foregroundStyle(.secondary)
+        GlassCard {
+            VStack(spacing: 6) {
+                Image(systemName: icon).foregroundStyle(TrekTheme.accent).font(.title3)
+                CountUpText(value: value, suffix: suffix).font(.title2.bold())
+                Text(label).font(.caption).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity).padding()
-        .background(.gray.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }

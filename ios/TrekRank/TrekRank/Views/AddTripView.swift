@@ -38,6 +38,8 @@ struct AddTripView: View {
                 }
                 if let error { Text(error).foregroundStyle(.red).font(.caption) }
             }
+            .scrollContentBackground(.hidden)
+            .background(ScreenBackground())
             .navigationTitle("New Trip")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

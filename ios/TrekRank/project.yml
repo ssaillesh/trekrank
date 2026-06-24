@@ -29,6 +29,7 @@ targets:
         UILaunchScreen: {}
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+        NSLocationWhenInUseUsageDescription: "TrekRank uses your location to show where you are on your travel map."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.trekrank.ios

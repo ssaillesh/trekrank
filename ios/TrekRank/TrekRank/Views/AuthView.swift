@@ -11,23 +11,24 @@ struct AuthView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [TrekTheme.deep, .black],
-                           startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea()
+            ScreenBackground()
             VStack(spacing: 20) {
                 Spacer()
                 Image(systemName: "globe.americas.fill")
                     .font(.system(size: 72)).foregroundStyle(TrekTheme.accent)
+                    .shadow(color: TrekTheme.accent.opacity(0.6), radius: 20)
                 Text("TrekRank").font(.largeTitle.bold()).foregroundStyle(.white)
                 Text("Log trips. Climb the ranks.").foregroundStyle(.white.opacity(0.7))
 
-                VStack(spacing: 12) {
-                    field("Email", text: $email, keyboard: .emailAddress)
-                    if isRegister {
-                        field("Username", text: $username)
-                        field("Display name", text: $displayName)
+                GlassCard {
+                    VStack(spacing: 12) {
+                        field("Email", text: $email, keyboard: .emailAddress)
+                        if isRegister {
+                            field("Username", text: $username)
+                            field("Display name", text: $displayName)
+                        }
+                        secureField("Password", text: $password)
                     }
-                    secureField("Password", text: $password)
                 }
                 .padding(.top, 8)
 
@@ -38,12 +39,10 @@ struct AuthView: View {
                 Button(action: submit) {
                     HStack {
                         if session.isLoading { ProgressView().tint(.black) }
-                        Text(isRegister ? "Create account" : "Log in").bold()
+                        Text(isRegister ? "Create account" : "Log in")
                     }
-                    .frame(maxWidth: .infinity).padding()
-                    .background(TrekTheme.accent).foregroundStyle(.black)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
+                .buttonStyle(NeonButtonStyle())
                 .disabled(session.isLoading)
 
                 Button(isRegister ? "Have an account? Log in" : "New here? Create an account") {
@@ -167,6 +166,8 @@ struct PasswordResetView: View {
                     Section { Text(err).font(.footnote).foregroundStyle(.red) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(ScreenBackground())
             .navigationTitle("Forgot password")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

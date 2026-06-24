@@ -19,20 +19,27 @@ struct FeedView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if vm.items.isEmpty && !vm.loading {
-                    ContentUnavailableView("No activity yet",
-                        systemImage: "sparkles",
-                        description: Text("Add friends and log trips to see your feed light up."))
+            ScrollView {
+                LazyVStack(spacing: 14) {
+                    if vm.items.isEmpty && !vm.loading {
+                        ContentUnavailableView("No activity yet",
+                            systemImage: "sparkles",
+                            description: Text("Add friends and log trips to see your feed light up."))
+                            .padding(.top, 80)
+                    }
+                    ForEach(Array(vm.items.enumerated()), id: \.element.id) { idx, item in
+                        FeedRow(item: item)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .animation(.spring(response: 0.5, dampingFraction: 0.8)
+                                .delay(Double(min(idx, 8)) * 0.04), value: vm.items.count)
+                    }
                 }
-                ForEach(vm.items) { item in
-                    FeedRow(item: item)
-                }
+                .padding(.horizontal).padding(.top, 8)
             }
-            .listStyle(.plain)
+            .trekScreen()
             .navigationTitle("Feed")
             .refreshable { await vm.load() }
-            .overlay { if vm.loading && vm.items.isEmpty { ProgressView() } }
+            .overlay { if vm.loading && vm.items.isEmpty { ProgressView().tint(TrekTheme.accent) } }
             .task { await vm.load() }
         }
     }
@@ -42,17 +49,19 @@ struct FeedRow: View {
     let item: FeedItem
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon).font(.title2)
-                .foregroundStyle(TrekTheme.accent).frame(width: 34)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("@\(item.user.username)").font(.subheadline.bold())
-                Text(detail).font(.subheadline).foregroundStyle(.secondary)
-                Text(RelativeDate.string(item.createdAt)).font(.caption2).foregroundStyle(.tertiary)
+        GlassCard {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: icon).font(.title2)
+                    .foregroundStyle(TrekTheme.accent).frame(width: 38, height: 38)
+                    .background(TrekTheme.accent.opacity(0.12), in: Circle())
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("@\(item.user.username)").font(.subheadline.bold())
+                    Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                    Text(RelativeDate.string(item.createdAt)).font(.caption2).foregroundStyle(.tertiary)
+                }
+                Spacer()
             }
-            Spacer()
         }
-        .padding(.vertical, 6)
     }
 
     private var icon: String {

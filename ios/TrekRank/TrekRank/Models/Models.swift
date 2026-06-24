@@ -168,7 +168,7 @@ struct MapCountry: Codable, Identifiable {
     let visits: Int
 }
 
-struct MapCity: Codable, Identifiable {
+struct MapCity: Codable, Identifiable, Hashable {
     var id: String { "\(name)-\(countryCode)" }
     let name: String
     let countryCode: String
