@@ -1,15 +1,15 @@
 import uuid
 from datetime import datetime, date
 
-from geoalchemy2 import Geography
-from sqlalchemy import String, Text, Integer, Numeric, Boolean, Date, DateTime, CHAR, ForeignKey, func
+from sqlalchemy import String, Text, Integer, Numeric, Boolean, Date, DateTime, CHAR, Float, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
-# Coordinates are stored as PostGIS GEOGRAPHY(POINT, 4326) with GiST indexes;
-# distances are computed with ST_Distance over the geography type.
+# Coordinates are stored as plain lat/lng columns (WGS84); distances are
+# computed in Python with a Haversine great-circle formula. This keeps the app
+# portable across any PostgreSQL without requiring the PostGIS extension.
 
 
 class Trip(Base):
