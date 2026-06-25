@@ -87,18 +87,35 @@ struct NeonButtonStyle: ButtonStyle {
 /// Symbol inset), the medal *is the symbol itself*, metal-filled — exactly like
 /// the web "badges 1.0" silhouette medals. The symbol's own vector outline is
 /// filled with a conic metal sheen (gold/silver/bronze/copper/steel/emerald/
-/// sapphire/platinum/amethyst), with a top gloss and a darker rim for relief.
+/// sapphire/platinum/amethyst), and is given real thickness by stacking offset
+/// copies behind the front face (a cheap, static extrusion with a reeded edge).
 struct BadgeMedallion: View {
     let badge: Badge
     var size: CGFloat = 64
+    /// Extrusion depth as a fraction of `size`. 0 = flat.
+    var thickness: CGFloat = 0.14
 
     var body: some View {
         let metal = Self.metal(for: badge)
         // The silhouettes live in a 0–48 viewBox; scale to the requested size.
         let shape = BadgeSilhouette.named(Self.silhouette(badge))
             .outline.applying(CGAffineTransform(scaleX: size / 48, y: size / 48))
+        let depth = size * thickness
+        // More slices on bigger badges; capped so the achievements grid stays light.
+        let slices = max(4, min(22, Int(size * 0.16)))
+        let edge = metal.stops[metal.stops.count / 2]   // mid metal tone for the side wall
         ZStack {
-            // Conic "struck metal" sheen filling the symbol shape.
+            // --- Side wall: stacked copies receding to the lower-right, each
+            // slightly re-lit so the edge reads as struck/reeded metal. Drawn
+            // back-to-front (deepest first).
+            ForEach(0..<slices, id: \.self) { i in
+                let f = 1 - CGFloat(i) / CGFloat(slices)        // 1 (deep) → ~0 (near front)
+                shape
+                    .fill(edge)
+                    .brightness(-0.34 + 0.10 * Double(sin(CGFloat(i) / CGFloat(slices) * .pi * 4)))
+                    .offset(x: depth * f, y: depth * f)
+            }
+            // --- Front face: conic "struck metal" sheen filling the symbol.
             shape.fill(AngularGradient(
                 colors: metal.stops, center: .center, angle: .degrees(215)))
             // Glossy top sheen, confined to the shape.
@@ -110,8 +127,10 @@ struct BadgeMedallion: View {
                          style: StrokeStyle(lineWidth: max(0.6, size * 0.018),
                                             lineJoin: .round))
         }
+        // Re-center so the extrusion doesn't push the medal off to one side.
+        .offset(x: -depth / 2, y: -depth / 2)
         .frame(width: size, height: size)
-        .shadow(color: .black.opacity(0.40), radius: size * 0.10, y: size * 0.06)
+        .shadow(color: .black.opacity(0.40), radius: size * 0.10, y: size * 0.07)
         .grayscale(badge.earned ? 0 : 1)
         .opacity(badge.earned ? 1 : 0.45)
     }
