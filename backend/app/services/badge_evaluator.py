@@ -10,9 +10,31 @@ from app.models import (
 )
 from app.data.countries import continent_of, countries_in_continent
 
+# Continents that count toward the "visit every continent" badge (Antarctica is
+# excluded so the achievement stays attainable, but still has its own badge).
+INHABITED_CONTINENTS = {"AF", "AS", "EU", "NA", "SA", "OC"}
+
+
+def _visited_continents(db: Session, user: User) -> set[str]:
+    """Continents the user has set foot on. The continent of their home country
+    (where they reside) always counts, even without a logged trip there."""
+    codes = db.execute(
+        select(VisitedCountry.country_code).where(VisitedCountry.user_id == user.id)
+    ).scalars().all()
+    conts = {continent_of(c) for c in codes}
+    if user.home_country:
+        conts.add(continent_of(user.home_country))
+    conts.discard(None)
+    return conts
+
 
 def _requirement_met(db: Session, user: User, req: dict) -> bool:
     rtype = req.get("type")
+
+    if rtype == "continent_visited":
+        return req["continent"] in _visited_continents(db, user)
+    if rtype == "all_continents":
+        return INHABITED_CONTINENTS.issubset(_visited_continents(db, user))
 
     if rtype == "trips":
         return user.total_trips >= req["threshold"]

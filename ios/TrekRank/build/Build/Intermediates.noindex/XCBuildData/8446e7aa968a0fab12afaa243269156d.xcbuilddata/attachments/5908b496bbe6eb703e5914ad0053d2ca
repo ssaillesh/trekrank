@@ -1,0 +1,178 @@
+{
+  "" : {
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRank-master.dia",
+    "emit-module-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRank-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRank-master-emit-module.dia",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRank-master.swiftdeps"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Config.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Config.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Config.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Config.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Config.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Config.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Config.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Config.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Config~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Models/Models.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Models.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Models.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Models.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Models.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Models.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Models.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Models.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Models~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Networking/APIClient.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/APIClient.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/APIClient.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/APIClient.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/APIClient.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/APIClient.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/APIClient.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/APIClient.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/APIClient~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Store/LocationManager.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LocationManager.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LocationManager.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LocationManager.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LocationManager.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LocationManager.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LocationManager.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LocationManager.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LocationManager~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Store/SessionStore.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SessionStore.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SessionStore.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SessionStore.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SessionStore.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SessionStore.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SessionStore.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SessionStore.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SessionStore~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Theme.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Theme.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Theme.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Theme.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Theme.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Theme.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Theme.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Theme.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Theme~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/TrekRankApp.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRankApp.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRankApp.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRankApp.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRankApp.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRankApp.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRankApp.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRankApp.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TrekRankApp~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Units.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Units.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Units.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Units.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Units.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Units.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Units.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Units.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/Units~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Views/AddTripView.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AddTripView.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AddTripView.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AddTripView.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AddTripView.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AddTripView.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AddTripView.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AddTripView.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AddTripView~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Views/AuthView.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AuthView.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AuthView.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AuthView.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AuthView.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AuthView.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AuthView.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AuthView.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/AuthView~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Views/FeedView.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/FeedView.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/FeedView.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/FeedView.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/FeedView.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/FeedView.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/FeedView.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/FeedView.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/FeedView~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Views/LeaderboardView.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LeaderboardView.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LeaderboardView.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LeaderboardView.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LeaderboardView.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LeaderboardView.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LeaderboardView.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LeaderboardView.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/LeaderboardView~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Views/MapView.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/MapView.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/MapView.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/MapView.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/MapView.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/MapView.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/MapView.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/MapView.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/MapView~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Views/ProfileView.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/ProfileView.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/ProfileView.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/ProfileView.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/ProfileView.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/ProfileView.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/ProfileView.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/ProfileView.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/ProfileView~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Views/RootView.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/RootView.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/RootView.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/RootView.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/RootView.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/RootView.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/RootView.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/RootView.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/RootView~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Views/SettingsView.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SettingsView.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SettingsView.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/SettingsView~partial.swiftmodule"
+  },
+  "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/TrekRank/Views/TripsView.swift" : {
+    "const-values" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TripsView.swiftconstvalues",
+    "dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TripsView.d",
+    "diagnostics" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TripsView.dia",
+    "index-unit-output-path" : "/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TripsView.o",
+    "llvm-bc" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TripsView.bc",
+    "object" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TripsView.o",
+    "swift-dependencies" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TripsView.swiftdeps",
+    "swiftmodule" : "/Users/saillesh/Desktop/trackapp/trekrank/ios/TrekRank/build/Build/Intermediates.noindex/TrekRank.build/Debug-iphonesimulator/TrekRank.build/Objects-normal/arm64/TripsView~partial.swiftmodule"
+  }
+}

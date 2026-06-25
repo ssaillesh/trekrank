@@ -3,11 +3,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, VisitedCountry, VisitedCity
+from app.models import User, VisitedCountry, VisitedCity, Badge, UserBadge
 from app.middleware.auth import get_current_user
 from app.schemas.user import (
     UserProfile, UserPublic, UserUpdate, UserStats, UserMap, MapCountry, MapCity,
 )
+from app.schemas.social import BadgeOut
 from app.services.stats import detailed_stats
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -43,11 +44,17 @@ def update_me(body: UserUpdate, user: User = Depends(get_current_user), db: Sess
     if "email" in data and data["email"] and data["email"] != user.email:
         if db.scalar(select(User.id).where(User.email == data["email"])):
             raise HTTPException(status.HTTP_409_CONFLICT, "Email already in use")
+    home_changed = "home_country" in data and data["home_country"] != user.home_country
     for field, value in data.items():
         setattr(user, field, value)
     db.add(user)
     db.commit()
     db.refresh(user)
+    # Changing residence can immediately complete continent achievements (the
+    # home continent counts as visited), so re-evaluate badges right away.
+    if home_changed:
+        from app.workers.badge_worker import evaluate_badges_sync
+        evaluate_badges_sync(str(user.id))
     return _profile(user, include_email=True)
 
 
@@ -66,6 +73,24 @@ def search_users(q: str = Query(min_length=1), db: Session = Depends(get_db)):
 @router.get("/{username}", response_model=UserProfile)
 def get_user(username: str, db: Session = Depends(get_db)):
     return _profile(_get_by_username(db, username))
+
+
+@router.get("/{username}/badges", response_model=list[BadgeOut])
+def get_user_badges(username: str, db: Session = Depends(get_db)):
+    """Public: a user's badge showcase (all badges with their earned state)."""
+    user = _get_by_username(db, username)
+    earned = {
+        ub.badge_id: ub
+        for ub in db.execute(select(UserBadge).where(UserBadge.user_id == user.id)).scalars().all()
+    }
+    badges = db.execute(select(Badge)).scalars().all()
+    return [
+        BadgeOut(id=b.id, name=b.name, description=b.description, icon_url=b.icon_url,
+                 emoji=b.emoji, category=b.category, requirement=b.requirement,
+                 earned=b.id in earned,
+                 earned_at=earned[b.id].earned_at if b.id in earned else None)
+        for b in badges
+    ]
 
 
 @router.get("/{username}/stats", response_model=UserStats)

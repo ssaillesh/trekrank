@@ -6,7 +6,7 @@
 	<integer>11</integer>
 	<key>logs</key>
 	<dict>
-		<key>8E72909C-7E20-4F2A-BFB3-E241608A55CA</key>
+		<key>BFAAB000-3048-4363-BA75-854153B97270</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>8E72909C-7E20-4F2A-BFB3-E241608A55CA.xcactivitylog</string>
+			<string>BFAAB000-3048-4363-BA75-854153B97270.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -40,15 +40,15 @@
 			<key>signature</key>
 			<string>Building project TrekRank with scheme TrekRank and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>804054727.59355903</real>
+			<real>804055476.16166997</real>
 			<key>timeStoppedRecording</key>
-			<real>804054731.59554195</real>
+			<real>804055481.10458601</real>
 			<key>title</key>
 			<string>Building project TrekRank with scheme TrekRank and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>8E72909C-7E20-4F2A-BFB3-E241608A55CA</string>
+			<string>BFAAB000-3048-4363-BA75-854153B97270</string>
 		</dict>
-		<key>F4D4D247-8FFA-442C-A5A2-A2CA362CFC80</key>
+		<key>F22626F7-B3FE-4C7F-8128-0746E7F6683E</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -57,7 +57,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>F4D4D247-8FFA-442C-A5A2-A2CA362CFC80.xcactivitylog</string>
+			<string>F22626F7-B3FE-4C7F-8128-0746E7F6683E.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -82,13 +82,13 @@
 			<key>signature</key>
 			<string>Building project TrekRank with scheme TrekRank and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>804054151.60223305</real>
+			<real>804056142.92259705</real>
 			<key>timeStoppedRecording</key>
-			<real>804054156.99862301</real>
+			<real>804056161.73060703</real>
 			<key>title</key>
 			<string>Building project TrekRank with scheme TrekRank and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>F4D4D247-8FFA-442C-A5A2-A2CA362CFC80</string>
+			<string>F22626F7-B3FE-4C7F-8128-0746E7F6683E</string>
 		</dict>
 	</dict>
 </dict>

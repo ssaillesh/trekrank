@@ -78,6 +78,7 @@ struct FeedView: View {
             }
             .trekScreen()
             .navigationTitle("Feed")
+            .navigationDestination(for: String.self) { PublicProfileView(username: $0) }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
                         prompt: scope == .people ? "Search people to add" : "Search posts")
             .searchScopes($scope) {
@@ -107,10 +108,13 @@ struct FeedView: View {
                 .padding(.top, 80)
         }
         ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
-            FeedRow(item: item)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.spring(response: 0.5, dampingFraction: 0.8)
-                    .delay(Double(min(idx, 8)) * 0.04), value: items.count)
+            NavigationLink(value: item.user.username) {
+                FeedRow(item: item)
+            }
+            .buttonStyle(.plain)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .animation(.spring(response: 0.5, dampingFraction: 0.8)
+                .delay(Double(min(idx, 8)) * 0.04), value: items.count)
         }
     }
 
@@ -125,10 +129,13 @@ struct FeedView: View {
             ContentUnavailableView.search(text: query).padding(.top, 60)
         } else {
             ForEach(vm.people, id: \.id) { person in
-                PersonRow(person: person,
-                          requested: vm.requested.contains(person.username)) {
-                    Task { await vm.addFriend(person.username) }
+                NavigationLink(value: person.username) {
+                    PersonRow(person: person,
+                              requested: vm.requested.contains(person.username)) {
+                        Task { await vm.addFriend(person.username) }
+                    }
                 }
+                .buttonStyle(.plain)
             }
         }
     }

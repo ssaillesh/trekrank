@@ -127,6 +127,14 @@ actor APIClient {
         try await request("users/me", decode: UserProfile.self)
     }
 
+    func user(username: String) async throws -> UserProfile {
+        try await request("users/\(username)", decode: UserProfile.self)
+    }
+
+    func userBadges(username: String) async throws -> [Badge] {
+        try await request("users/\(username)/badges", decode: [Badge].self)
+    }
+
     func stats(username: String) async throws -> UserStats {
         try await request("users/\(username)/stats", decode: UserStats.self)
     }

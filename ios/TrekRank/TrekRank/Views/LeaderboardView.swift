@@ -37,23 +37,25 @@ struct LeaderboardView: View {
                     ForEach(metrics, id: \.self) { Text($0.capitalized).tag($0) }
                 }.pickerStyle(.segmented).padding(.horizontal)
 
-                List {
-                    if let rankings = vm.board?.rankings {
-                        ForEach(rankings) { entry in
-                            LeaderboardRow(entry: entry, metric: vm.metric,
-                                           isMe: entry.rank == vm.board?.myRank)
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
-                                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                ScrollView {
+                    LazyVStack(spacing: 10) {
+                        if let rankings = vm.board?.rankings {
+                            ForEach(rankings) { entry in
+                                NavigationLink(value: entry.user.username) {
+                                    LeaderboardRow(entry: entry, metric: vm.metric,
+                                                   isMe: entry.rank == vm.board?.myRank)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
+                    .padding(.horizontal, 16).padding(.top, 4)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
                 .overlay { if vm.loading { ProgressView().tint(TrekTheme.accent) } }
             }
             .trekScreen()
             .navigationTitle("Leaderboard")
+            .navigationDestination(for: String.self) { PublicProfileView(username: $0) }
             .task { await vm.load() }
             .onChange(of: vm.scope) { _, _ in Task { await vm.load() } }
             .onChange(of: vm.metric) { _, _ in Task { await vm.load() } }

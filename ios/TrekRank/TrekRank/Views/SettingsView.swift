@@ -20,6 +20,11 @@ struct SettingsView: View {
                     } label: {
                         row("lock", "Change password")
                     }
+                    NavigationLink {
+                        HomeLocationView().environmentObject(session)
+                    } label: {
+                        row("house", "Residence", value: session.profile?.homeCity ?? "Not set")
+                    }
                 }
 
                 Section("Preferences") {
@@ -159,6 +164,57 @@ struct ChangePasswordView: View {
         .scrollContentBackground(.hidden)
         .background(ScreenBackground())
         .navigationTitle("Password")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { session.errorMessage = nil }
+    }
+}
+
+/// Lets the user set where they live. The home continent counts toward the
+/// "Worldwide" achievement, so no trip there is required.
+struct HomeLocationView: View {
+    @EnvironmentObject var session: SessionStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var place: SelectedPlace?
+
+    var body: some View {
+        Form {
+            if let city = session.profile?.homeCity {
+                Section("Current") {
+                    Label(
+                        city + (session.profile?.homeCountry.map { ", \($0)" } ?? ""),
+                        systemImage: "house.fill")
+                }
+            }
+            Section {
+                PlaceSearchField(placeholder: "Search your home city", selection: $place)
+            } header: {
+                Text("Where you live")
+            } footer: {
+                Text("Your home continent counts as visited toward the “Worldwide” achievement — you don't need to log a trip there.")
+            }
+            Section {
+                Button {
+                    Task {
+                        if let p = place,
+                           await session.updateProfile(homeCity: p.city, homeCountry: p.countryCode) {
+                            dismiss()
+                        }
+                    }
+                } label: {
+                    HStack {
+                        if session.isLoading { ProgressView() }
+                        Text("Save residence")
+                    }
+                }
+                .disabled(place == nil || session.isLoading)
+            }
+            if let err = session.errorMessage {
+                Section { Text(err).font(.footnote).foregroundStyle(.red) }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(ScreenBackground())
+        .navigationTitle("Residence")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { session.errorMessage = nil }
     }
