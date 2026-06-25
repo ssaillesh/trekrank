@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import String, Integer, Numeric, DateTime, CHAR, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -23,6 +23,12 @@ class User(Base):
     bio: Mapped[str | None] = mapped_column(String(300), nullable=True)
     home_city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     home_country: Mapped[str | None] = mapped_column(CHAR(2), nullable=True)
+
+    # Up to 3 badge ids the user has pinned to show off on their profile, in
+    # display order. Empty = no featured badges chosen.
+    featured_badges: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
 
     # cached stats (maintained by the trip-processor worker)
     total_countries: Mapped[int] = mapped_column(Integer, default=0, index=True)

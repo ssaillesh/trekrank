@@ -121,6 +121,14 @@ actor APIClient {
             decode: UserProfile.self)
     }
 
+    /// Pin up to 3 earned badges to the profile (order preserved). The backend
+    /// drops any ids that aren't earned and caps the list at 3.
+    func setFeaturedBadges(_ ids: [String]) async throws -> UserProfile {
+        struct Body: Encodable { let badge_ids: [String] }
+        return try await request("users/me/featured", method: "PUT",
+            body: Body(badge_ids: ids), decode: UserProfile.self)
+    }
+
     // MARK: Users
 
     func me() async throws -> UserProfile {

@@ -56,6 +56,8 @@ struct UserProfile: Codable, Identifiable {
     var totalTrips: Int
     var currentStreak: Int
     var longestStreak: Int
+    /// Up to 3 badge ids the user pinned to show off, in display order.
+    var featuredBadges: [String] = []
 
     enum CodingKeys: String, CodingKey {
         case id, username, email, bio
@@ -63,12 +65,32 @@ struct UserProfile: Codable, Identifiable {
         case avatarUrl = "avatar_url"
         case homeCity = "home_city"
         case homeCountry = "home_country"
+        case featuredBadges = "featured_badges"
         case totalCountries = "total_countries"
         case totalCities = "total_cities"
         case totalKm = "total_km"
         case totalTrips = "total_trips"
         case currentStreak = "current_streak"
         case longestStreak = "longest_streak"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        username = try c.decode(String.self, forKey: .username)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        avatarUrl = try c.decodeIfPresent(String.self, forKey: .avatarUrl)
+        bio = try c.decodeIfPresent(String.self, forKey: .bio)
+        homeCity = try c.decodeIfPresent(String.self, forKey: .homeCity)
+        homeCountry = try c.decodeIfPresent(String.self, forKey: .homeCountry)
+        email = try c.decodeIfPresent(String.self, forKey: .email)
+        featuredBadges = try c.decodeIfPresent([String].self, forKey: .featuredBadges) ?? []
+        totalCountries = try c.decode(Int.self, forKey: .totalCountries)
+        totalCities = try c.decode(Int.self, forKey: .totalCities)
+        totalKm = try c.decode(Double.self, forKey: .totalKm)
+        totalTrips = try c.decode(Int.self, forKey: .totalTrips)
+        currentStreak = try c.decode(Int.self, forKey: .currentStreak)
+        longestStreak = try c.decode(Int.self, forKey: .longestStreak)
     }
 }
 

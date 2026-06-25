@@ -7,6 +7,7 @@ from app.models import User, VisitedCountry, VisitedCity, Badge, UserBadge
 from app.middleware.auth import get_current_user
 from app.schemas.user import (
     UserProfile, UserPublic, UserUpdate, UserStats, UserMap, MapCountry, MapCity,
+    FeaturedBadgesUpdate,
 )
 from app.schemas.social import BadgeOut
 from app.services.stats import detailed_stats
@@ -20,6 +21,7 @@ def _profile(user: User, include_email: bool = False) -> UserProfile:
         avatar_url=user.avatar_url, bio=user.bio, home_city=user.home_city,
         home_country=user.home_country,
         email=user.email if include_email else None,
+        featured_badges=user.featured_badges or [],
         total_countries=user.total_countries, total_cities=user.total_cities,
         total_km=float(user.total_km), total_trips=user.total_trips,
         current_streak=user.current_streak, longest_streak=user.longest_streak,
@@ -55,6 +57,32 @@ def update_me(body: UserUpdate, user: User = Depends(get_current_user), db: Sess
     if home_changed:
         from app.workers.badge_worker import evaluate_badges_sync
         evaluate_badges_sync(str(user.id))
+    return _profile(user, include_email=True)
+
+
+@router.put("/me/featured", response_model=UserProfile)
+def set_featured_badges(
+    body: FeaturedBadgesUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Pin up to 3 earned badges to the profile. Order is preserved; ids that
+    aren't earned (or duplicates) are dropped, capped at 3."""
+    earned = set(
+        db.execute(
+            select(UserBadge.badge_id).where(UserBadge.user_id == user.id)
+        ).scalars().all()
+    )
+    cleaned: list[str] = []
+    for bid in body.badge_ids:
+        if bid in earned and bid not in cleaned:
+            cleaned.append(bid)
+        if len(cleaned) == 3:
+            break
+    user.featured_badges = cleaned
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return _profile(user, include_email=True)
 
 

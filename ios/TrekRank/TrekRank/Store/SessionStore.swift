@@ -113,6 +113,11 @@ final class SessionStore: ObservableObject {
         if let p = try? await APIClient.shared.me() { self.profile = p }
     }
 
+    /// Pin up to 3 badges to show off on the profile. Updates `profile` on success.
+    func setFeaturedBadges(_ ids: [String]) async {
+        if let p = try? await APIClient.shared.setFeaturedBadges(ids) { self.profile = p }
+    }
+
     private func apply(_ resp: TokenResponse) async throws {
         UserDefaults.standard.set(resp.accessToken, forKey: tokenKey)
         UserDefaults.standard.set(resp.refreshToken, forKey: refreshKey)

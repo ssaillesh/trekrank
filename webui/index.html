@@ -412,7 +412,7 @@
     <div class="badge-line reveal d4">
       <span>🛰️ <b>GPS-verified</b> journeys</span>
       <span>🏆 <b>Ranks</b> &amp; reputation</span>
-      <span>🎖️ <b>24</b> collectible badges</span>
+      <span>🎖️ <b>25</b> collectible badges</span>
       <span>🌍 <b>Global</b> leaderboards</span>
     </div>
   </div>
@@ -505,7 +505,7 @@
 <section class="sec" id="badges">
   <div class="wrap">
     <div class="sec-head center reveal">
-      <div class="eyebrow">50+ collectible badges</div>
+      <div class="eyebrow">25 collectible badges</div>
       <h2 class="h2">Collect the moments<br>that matter.</h2>
       <p class="lead center">Your boarding pass becomes an achievement — scan it, and those miles are
         verified for good. Every badge you earn lands in your followers' feeds.</p>
@@ -793,21 +793,23 @@ function coinHTML({metal, scene, title='badge', size=104, static:isStatic=false}
     </div></div>`;
 }
 
-/* curated taste of 50+ — [metal, shape, scene, fullName, funline, requirement(short), coinName(short)] */
+/* A real slice of the 25-badge catalog — names + requirements match what the
+   app actually awards (see backend/scripts/seed_badges.py, the source of truth).
+   [metal, scene, fullName, funline, requirement(short), coinName(short)] */
 const BADGES = [
-  ['silver',  SIL.plane,    'Takeoff','Wheels up.','First flight','Takeoff'],
+  ['bronze',  SIL.map,      'First Steps','Wheels up.','Your first trip','First Steps'],
   ['bronze',  SIL.globe,    'Explorer','5 countries deep.','5 countries','Explorer'],
   ['gold',    SIL.trophy,   'World Traveler','25 stamps strong.','25 countries','World'],
   ['sapphire',SIL.orbit,    'Around the World','50,000 km. Respect.','50,000 km','Worldwide'],
+  ['steel',   SIL.plane,    'Takeoff','Wheels up.','Your first flight','Takeoff'],
   ['steel',   SIL.train,    'Rail Rider','Track addict.','10 train trips','Rail Rider'],
   ['emerald', SIL.cityhop,  'City Hopper','10 cities, no chill.','10 cities','City Hopper'],
-  ['platinum',SIL.polar,    'Polar Pioneer','You went there?!','Antarctica','Polar'],
-  ['copper',  SIL.downunder,'Down Under','G’day, legend.','Oceania','Down Under'],
-  ['gold',    SIL.flag,     'Border Crosser','New stamp unlocked.','Cross a border','Border'],
-  ['emerald', SIL.coffee,   'Local Brew','Caffeine secured.','Find a local café','Local Brew'],
-  ['steel',   SIL.moon,     'Night Owl','3am check-in.','Travel past midnight','Night Owl'],
-  ['bronze',  SIL.backpack, 'Weekend Warrior','3 trips, 1 month.','3 trips / month','Weekender'],
-  ['amethyst',SIL.crown,    'Legend','Untouchable.','50 countries','Legend'],
+  ['platinum',SIL.polar,    'Polar Pioneer','You went there?!','Set foot in Antarctica','Polar'],
+  ['copper',  SIL.downunder,'Down Under','G’day, legend.','Set foot in Oceania','Down Under'],
+  ['emerald', SIL.flag,     'Eurotrip','Old world unlocked.','Visit all of Europe','Eurotrip'],
+  ['gold',    SIL.globe,    'Worldwide','Every continent, done.','Every inhabited continent','Worldwide'],
+  ['copper',  SIL.backpack, 'Weekend Warrior','3 trips, 1 month.','3 trips in a month','Weekender'],
+  ['amethyst',SIL.crown,    'Legendary Explorer','Untouchable.','50 countries','Legendary'],
 ];
 document.getElementById('badgeGrid').innerHTML = BADGES.map(([metal,scene,nm,fun,req,short]) => `
   <div class="bcard"><div class="shine"></div>

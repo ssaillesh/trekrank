@@ -10,6 +10,7 @@ class UserPublic(BaseModel):
     bio: str | None = None
     home_city: str | None = None
     home_country: str | None = None
+    featured_badges: list[str] = []
 
 
 class UserProfile(UserPublic):
@@ -20,6 +21,11 @@ class UserProfile(UserPublic):
     total_trips: int = 0
     current_streak: int = 0
     longest_streak: int = 0
+
+
+class FeaturedBadgesUpdate(BaseModel):
+    # Up to 3 earned badge ids, in the order they should appear.
+    badge_ids: list[str] = Field(default_factory=list, max_length=3)
 
 
 class UserUpdate(BaseModel):
