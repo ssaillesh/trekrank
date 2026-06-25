@@ -281,6 +281,7 @@ typedef unsigned int swift_uint4  __attribute__((__ext_vector_type__(4)));
 #endif
 @import CoreLocation;
 @import Foundation;
+@import MapKit;
 @import ObjectiveC;
 #endif
 
@@ -317,6 +318,17 @@ SWIFT_CLASS("_TtC8TrekRank15LocationManager")
 - (void)locationManagerDidChangeAuthorization:(CLLocationManager * _Nonnull)manager;
 - (void)locationManager:(CLLocationManager * _Nonnull)manager didUpdateLocations:(NSArray<CLLocation *> * _Nonnull)locations;
 - (void)locationManager:(CLLocationManager * _Nonnull)manager didFailWithError:(NSError * _Nonnull)error;
+@end
+
+@class MKLocalSearchCompleter;
+/// Live, type-ahead city search backed by MapKit. Typing “london” yields
+/// “London, England, United Kingdom”, “London, ON, Canada”, etc. Selecting a
+/// suggestion resolves it to a <code>SelectedPlace</code>.
+SWIFT_CLASS("_TtC8TrekRank20PlaceSearchCompleter")
+@interface PlaceSearchCompleter : NSObject <MKLocalSearchCompleterDelegate>
+- (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
+- (void)completerDidUpdateResults:(MKLocalSearchCompleter * _Nonnull)completer;
+- (void)completer:(MKLocalSearchCompleter * _Nonnull)completer didFailWithError:(NSError * _Nonnull)error;
 @end
 
 #endif

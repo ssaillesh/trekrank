@@ -6,7 +6,7 @@
 	<integer>11</integer>
 	<key>logs</key>
 	<dict>
-		<key>410A724C-30A5-4885-AFBF-56D4E323C67C</key>
+		<key>81595A94-D445-4F40-8E65-8F99F90042FF</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>410A724C-30A5-4885-AFBF-56D4E323C67C.xcactivitylog</string>
+			<string>81595A94-D445-4F40-8E65-8F99F90042FF.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -40,13 +40,13 @@
 			<key>signature</key>
 			<string>Building project TrekRank with scheme TrekRank and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>804051878.69723105</real>
+			<real>804053703.95875394</real>
 			<key>timeStoppedRecording</key>
-			<real>804051883.15203905</real>
+			<real>804053714.37632406</real>
 			<key>title</key>
 			<string>Building project TrekRank with scheme TrekRank and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>410A724C-30A5-4885-AFBF-56D4E323C67C</string>
+			<string>81595A94-D445-4F40-8E65-8F99F90042FF</string>
 		</dict>
 		<key>F28A51ED-700B-4ED7-BA67-F9730A4D766D</key>
 		<dict>
