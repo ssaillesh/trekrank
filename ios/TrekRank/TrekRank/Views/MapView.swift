@@ -346,15 +346,22 @@ struct RecordView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
-                Map(position: $camera) {
-                    UserAnnotation()
-                    if rec.path.count > 1 {
-                        MapPolyline(coordinates: rec.path)
-                            .stroke(TrekTheme.accent, lineWidth: 5)
+                // The live Map + UserAnnotation keep a GPS session and continuous
+                // map redraw alive — very hot in the Simulator. Only render it
+                // while actually recording; show a cheap static backdrop when idle.
+                if rec.isRecording {
+                    Map(position: $camera) {
+                        UserAnnotation()
+                        if rec.path.count > 1 {
+                            MapPolyline(coordinates: rec.path)
+                                .stroke(TrekTheme.accent, lineWidth: 5)
+                        }
                     }
+                    .mapStyle(.standard(elevation: .flat))
+                    .ignoresSafeArea()
+                } else {
+                    ScreenBackground().ignoresSafeArea()
                 }
-                .mapStyle(.standard(elevation: .flat))
-                .ignoresSafeArea()
 
                 panel
             }
