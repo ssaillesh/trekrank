@@ -187,6 +187,8 @@
   .pass-medal .medal{width:78px; height:78px;}
   .bcard .nm{font-weight:800; font-size:15px;}
   .bcard .ds{font-size:12px; color:var(--muted2); margin-top:4px;}
+  .bcard .req{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--brand,#5eebd4); opacity:.78; margin-top:8px;}
   .bcard .shine{position:absolute; inset:0; border-radius:18px; pointer-events:none;
     background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.13) 50%,transparent 60%);
     opacity:0; transition:opacity .4s;}
@@ -203,38 +205,20 @@
     touch-action:none; will-change:transform; transform:rotateX(10deg) rotateY(-14deg);
     transition:transform .6s cubic-bezier(.4,.05,.2,1);}
   .coin.spin{transition:none; cursor:grabbing;}
-  /* metal faces, clipped to the shape, pushed to the front/back of the solid */
-  .coin-face{position:absolute; inset:0; clip-path:var(--shape,circle(49%)); background:var(--metal);
+  /* metal faces, masked to the symbol silhouette, pushed to the front/back of the solid */
+  .coin-face{position:absolute; inset:0; background:var(--metal);
+    -webkit-mask:var(--mask) center/86% no-repeat; mask:var(--mask) center/86% no-repeat;
     -webkit-backface-visibility:hidden; backface-visibility:hidden;
-    box-shadow:inset 0 7px 13px rgba(255,255,255,.6), inset 0 -13px 18px rgba(0,0,0,.5),
-      inset 0 0 0 3px var(--rim,#444), inset 0 0 0 6px rgba(255,255,255,.14);}
+    box-shadow:inset 0 7px 13px rgba(255,255,255,.6), inset 0 -13px 18px rgba(0,0,0,.5);}
   .coin-face.front{transform:translateZ(calc(var(--thick,13px)/2));}
   .coin-face.back{transform:rotateY(180deg) translateZ(calc(var(--thick,13px)/2));}
-  .coin-face::after{content:""; position:absolute; inset:0; clip-path:inherit; pointer-events:none;
+  .coin-face::after{content:""; position:absolute; inset:0; pointer-events:none;
+    -webkit-mask:var(--mask) center/86% no-repeat; mask:var(--mask) center/86% no-repeat;
     background:linear-gradient(125deg,transparent 40%,rgba(255,255,255,.45) 47%,transparent 55%);}
-  /* extruded body: many stacked shape slices fill the depth → a solid milled edge */
+  /* extruded body: many stacked symbol slices fill the depth → a solid milled edge */
   .coin-body{position:absolute; inset:0; transform-style:preserve-3d;}
-  .coin-body .slice{position:absolute; inset:0; clip-path:var(--shape,circle(49%)); background:var(--rim,#444);}
-  /* content rides just above each face, unclipped so text/art never gets cut */
-  .coin-content{position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
-    -webkit-backface-visibility:hidden; backface-visibility:hidden;}
-  .coin-content.front{transform:translateZ(calc(var(--thick,13px)/2 + .5px));}
-  .coin-content.back{transform:rotateY(180deg) translateZ(calc(var(--thick,13px)/2 + .5px));}
-  .engrave{width:54%; height:54%; overflow:visible;}
-  .engrave g{fill:currentColor; stroke:none;}
-  .engrave .rl{color:rgba(255,255,255,.55); transform:translate(-.5px,-.7px);}
-  .engrave .rd{color:rgba(0,0,0,.46);}
-  .back-content{text-align:center; padding:0 7%; color:rgba(12,12,14,.72); max-width:86%;}
-  .back-title{font-size:calc(var(--cs,108px)*.142); font-weight:850; line-height:1; letter-spacing:-.02em;}
-  .back-sub{font-size:calc(var(--cs,108px)*.082); font-weight:700; margin-top:5px; opacity:.82; line-height:1.05;}
-  .back-verify{font-size:calc(var(--cs,108px)*.07); font-weight:800; letter-spacing:.1em; margin-top:8px; opacity:.65;}
-  /* narrow shapes have less room — shrink text and drop the VERIFIED line */
-  .shape-star .back-content{max-width:58%;}
-  .shape-star .back-title{font-size:calc(var(--cs,108px)*.115);}
-  .shape-star .back-sub{font-size:calc(var(--cs,108px)*.07); margin-top:3px;}
-  .shape-gem .back-content{max-width:64%;}
-  .shape-banner .back-content{max-width:76%; padding-bottom:14%;}
-  .shape-star .back-verify, .shape-gem .back-verify, .shape-banner .back-verify{display:none;}
+  .coin-body .slice{position:absolute; inset:0; background:var(--rim,#444);
+    -webkit-mask:var(--mask) center/86% no-repeat; mask:var(--mask) center/86% no-repeat;}
   .coin-hint{font-size:12px; color:var(--muted2); font-weight:600; text-align:center;}
 
   /* ---------- boarding pass flip ---------- */
@@ -755,25 +739,25 @@ const cio = new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting){
   animateCount(counter, +counter.dataset.target); cio.disconnect(); }}), {threshold:.5});
 cio.observe(counter);
 
-/* =================== 3D metallic flip-coin system =================== */
-/* Embossed relief scenes (filled + stroked, all in currentColor so they emboss). */
-const SC = {
-  plane:'<path d="M6 41h28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="3 3" stroke-linecap="round"/><path d="M41 7c-1.6-1-4 .4-5.6 2L28 16l-9-2.6-2 2 6.5 4.6-4.4 4-4-1-1.8 1.9 5 3.4 3.4 5 1.9-1.8-1-4 4-4.4 4.6 6.5 2-2-2.6-9 6.6-7.4c1.6-1.6 3-4 2-5.6z"/>',
-  globe:'<circle cx="20" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M7 24h26M20 11c6 4 6 22 0 26M20 11c-6 4-6 22 0 26" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M35 13c3.3 0 6 2.7 6 6 0 4.5-6 11-6 11s-6-6.5-6-11c0-3.3 2.7-6 6-6z"/>',
-  trophy:'<path d="M15 8h18v7a9 9 0 0 1-18 0z"/><path d="M15 10h-4a4 4 0 0 0 4.5 6M33 10h4a4 4 0 0 1-4.5 6" fill="none" stroke="currentColor" stroke-width="2.6"/><rect x="22" y="25" width="4" height="6"/><rect x="15" y="31" width="18" height="4" rx="1"/><path d="M24 3l1.4 2.9 3.2.5-2.3 2.2.5 3.2L24 12.9l-2.8 1.4.5-3.2-2.3-2.2 3.2-.5z"/>',
-  orbit:'<circle cx="24" cy="24" r="11" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M13 24h22M24 13c6 4 6 18 0 22M24 13c-6 4-6 18 0 22" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="24" cy="24" rx="19" ry="7.5" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(-24 24 24)"/><path d="M41 15l3.4 1.7-3.6 1.7.7-1.7z"/>',
-  train:'<rect x="12" y="9" width="24" height="20" rx="4" fill="none" stroke="currentColor" stroke-width="2.6"/><rect x="15.5" y="13" width="6" height="6" rx="1"/><rect x="26.5" y="13" width="6" height="6" rx="1"/><path d="M14 25h20" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="33" r="2.3"/><circle cx="30" cy="33" r="2.3"/><path d="M8 39h32M16 35l-3 5M32 35l3 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-  cityhop:'<path d="M4 43h40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="6" y="26" width="12" height="17" rx="1"/><rect x="31" y="20" width="12" height="23" rx="1"/><path d="M9 22 Q24.5 0 40 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.5 3" stroke-linecap="round"/><circle cx="24" cy="7" r="3.2"/><path d="M24 10.5 L21 17 M24 10.5 L28 14" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/><path d="M21 17 L17 20 M21 17 L24.5 21.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>',
-  polar:'<path d="M4 41 L17 17 L25 31 L31 21 L44 41 Z"/><circle cx="37" cy="11" r="4"/><path d="M24 4v4M19 7l2 3M29 7l-2 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
-  downunder:'<circle cx="20" cy="19" r="8"/><path d="M6 33h36M11 39h26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M33 9c-4 1-6 5-5 9 .6-3 3-5 6-5-2-1-3-3-1-4z"/>',
-  backpack:'<rect x="14" y="14" width="20" height="28" rx="6" fill="none" stroke="currentColor" stroke-width="2.8"/><path d="M19 14c0-5 10-5 10 0" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="18" y="26" width="12" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M24 19v4" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
-  crown:'<path d="M9 35 L7 14 l9.5 8 L24 8 l7.5 14 L41 14 l-2 21 z"/><rect x="9" y="36" width="30" height="4.5" rx="1"/><circle cx="7" cy="13" r="2"/><circle cx="41" cy="13" r="2"/><circle cx="24" cy="6" r="2.2"/>',
-  compass:'<circle cx="24" cy="24" r="16" fill="none" stroke="currentColor" stroke-width="2.6"/><polygon points="24 11 28 24 24 37 20 24"/><circle cx="24" cy="24" r="2.2"/>',
-  map:'<path d="M8 12 L18 8 L30 12 L40 8 V36 L30 40 L18 36 L8 40 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M18 8v28M30 12v28" fill="none" stroke="currentColor" stroke-width="1.8"/>',
-  flame:'<path d="M24 5c2.5 7 9 8 9 16a9 9 0 0 1-18 0c0-3.5 1.2-5.6 2.4-6.6 1 3.4 3.2 3.4 3.2 1 0-3.4 0-6.6 3.4-10.4z"/>',
-  coffee:'<path d="M12 19h20v9a10 10 0 0 1-20 0z"/><path d="M32 20h3.5a4.5 4.5 0 0 1 0 9H30" fill="none" stroke="currentColor" stroke-width="2.6"/><rect x="9" y="38" width="26" height="3.5" rx="1.5"/><path d="M18 7c-2 2.4 0 4 0 6.5M24 5c-2 2.4 0 4 0 6.5M30 7c-2 2.4 0 4 0 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-  moon:'<path d="M31 7a15 15 0 1 0 9 25A12 12 0 0 1 31 7z"/><path d="M15 11l1.2 3.4 3.4 1.2-3.4 1.2L15 20l-1.2-3.4-3.4-1.2 3.4-1.2z"/>',
-  flag:'<path d="M12 6v36" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/><path d="M12 8h24l-5 6 5 6H12z"/>',
+/* =================== 3D metallic medal system =================== */
+/* Solid silhouette symbols — the badge IS the symbol, metal-filled. (viewBox 0 0 48 48) */
+const SIL = {
+  plane:    '<path d="M46 4 18 21 4 18 1 22 11 28 14 41 19 35 21 27Z"/>',
+  globe:    '<circle cx="24" cy="24" r="17" fill="none" stroke-width="3.2"/><path d="M7 24h34" fill="none" stroke-width="2.4"/><ellipse cx="24" cy="24" rx="8" ry="17" fill="none" stroke-width="2.4"/>',
+  trophy:   '<path d="M14 8h20v6a10 10 0 0 1-20 0Z"/><path d="M14 9h-5a5 5 0 0 0 6 7M34 9h5a5 5 0 0 1-6 7" fill="none" stroke-width="3"/><rect x="21" y="23" width="6" height="8"/><rect x="13" y="31" width="22" height="5" rx="1"/><rect x="16" y="36" width="16" height="4" rx="1"/>',
+  orbit:    '<circle cx="24" cy="24" r="9"/><ellipse cx="24" cy="24" rx="20" ry="7" fill="none" stroke-width="3.5" transform="rotate(-25 24 24)"/>',
+  train:    '<rect x="10" y="9" width="28" height="22" rx="5"/><circle cx="17" cy="35" r="3"/><circle cx="31" cy="35" r="3"/><path d="M8 41h32" fill="none" stroke-width="3"/>',
+  cityhop:  '<rect x="6" y="22" width="9" height="20"/><rect x="18" y="13" width="11" height="29"/><rect x="32" y="26" width="9" height="16"/><rect x="22.5" y="5" width="2" height="9"/>',
+  polar:    '<path d="M3 41 17 16 26 31 32 21 45 41Z"/><circle cx="36" cy="12" r="5"/>',
+  downunder:'<path d="M11 6C28 9 39 24 41 43 31 39 22 30 18 19 16 14 13 10 11 6Z"/>',
+  backpack: '<rect x="12" y="12" width="24" height="30" rx="8"/><path d="M19 13c0-6 10-6 10 0" fill="none" stroke-width="3.5"/>',
+  crown:    '<path d="M7 36 5 13 16.5 22 24 7 31.5 22 43 13 41 36Z"/><rect x="7" y="37" width="34" height="5" rx="1"/>',
+  compass:  '<circle cx="24" cy="24" r="17" fill="none" stroke-width="4"/><path d="M24 9 28 24 24 39 20 24Z"/><path d="M9 24 24 20 39 24 24 28Z"/>',
+  map:      '<path d="M6 12 18 8 30 12 42 8V36L30 40 18 36 6 40Z"/>',
+  flame:    '<path d="M24 4c3 8 11 9 11 18a11 11 0 0 1-22 0c0-4 1.5-7 3-8 1 4 4 4 4 1 0-4 0-7 4-11Z"/>',
+  coffee:   '<path d="M11 18h22v10a11 11 0 0 1-22 0Z"/><path d="M33 19h4a5 5 0 0 1 0 10H31" fill="none" stroke-width="3.5"/><rect x="8" y="38" width="28" height="4" rx="2"/>',
+  moon:     '<path d="M32 6a16 16 0 1 0 10 27A13 13 0 0 1 32 6Z"/><path d="M14 9l1.7 4.6 4.6 1.7-4.6 1.7L14 22l-1.7-4.6L7.7 16l4.6-1.7Z"/>',
+  flag:     '<path d="M12 5v38" fill="none" stroke-width="4"/><path d="M12 7h24l-5 7 5 7H12Z"/>',
 };
 const METALS = {
   gold:    {bg:'conic-gradient(from 215deg,#7a5b12,#ffe9a3,#d4af37,#fff6d5,#c9a52f,#7a5b12,#ffe39a,#d4af37,#7a5b12)', rim:'#5c4310'},
@@ -786,64 +770,53 @@ const METALS = {
   platinum:{bg:'conic-gradient(from 215deg,#7c8a9d,#f4f8ff,#c4d0e0,#ffffff,#b1bed2,#7c8a9d,#e7eef8,#c4d0e0,#7c8a9d)', rim:'#586271'},
   amethyst:{bg:'conic-gradient(from 215deg,#4a1d73,#d59bff,#8a3fd4,#f1d7ff,#7a32c0,#4a1d73,#c98cff,#8a3fd4,#4a1d73)', rim:'#341452'},
 };
-const SHAPES = {
-  circle:'circle(49%)',
-  hex:'polygon(50% 1%, 94% 25%, 94% 75%, 50% 99%, 6% 75%, 6% 25%)',
-  shield:'polygon(50% 99%, 9% 74%, 9% 12%, 50% 1%, 91% 12%, 91% 74%)',
-  star:'polygon(50% 0%, 61% 33%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 33%)',
-  octagon:'polygon(30% 1%, 70% 1%, 99% 30%, 99% 70%, 70% 99%, 30% 99%, 1% 70%, 1% 30%)',
-  gem:'polygon(50% 0%, 100% 38%, 50% 100%, 0% 38%)',
-  banner:'polygon(2% 0%, 98% 0%, 98% 100%, 50% 82%, 2% 100%)',
-  rounded:'inset(1% round 28%)',
-};
-function coinHTML({metal, shape, scene, title, sub, size=104, static:isStatic=false}){
-  const m=METALS[metal]||METALS.silver; const sh=SHAPES[shape]||SHAPES.circle;
-  const thick=Math.max(9, Math.round(size*0.13));
-  const vars=`--cs:${size}px;--metal:${m.bg};--shape:${sh};--rim:${m.rim};--thick:${thick}px;`;
-  const eng=`<svg class="engrave" viewBox="0 0 48 48" aria-hidden="true"><g class="rl">${scene}</g><g class="rd">${scene}</g></svg>`;
-  const back=`<div class="back-content"><div class="back-title">${title}</div><div class="back-sub">${sub}</div><div class="back-verify">✓ VERIFIED</div></div>`;
-  // extruded body: stacked clipped slices between the two faces, with a reeded sheen
-  const N=Math.max(8, Math.min(30, thick));
+function coinHTML({metal, scene, title='badge', size=104, static:isStatic=false}){
+  const m=METALS[metal]||METALS.silver;
+  const thick=Math.max(7, Math.round(size*0.11));
+  // the symbol silhouette becomes the medal — render it solid and use it as a mask
+  const svg=`<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48' fill='#000' stroke='#000' stroke-linejoin='round' stroke-linecap='round'>${scene}</svg>`;
+  const mask=`url(data:image/svg+xml;base64,${btoa(svg)})`;
+  const vars=`--cs:${size}px;--metal:${m.bg};--mask:${mask};--rim:${m.rim};--thick:${thick}px;`;
+  // extruded body: stacked symbol-masked slices between the two faces, with a reeded sheen
+  const N=Math.max(8, Math.min(26, thick));
   let body='';
   for(let i=0;i<N;i++){
     const z=(-thick/2 + 0.6) + (thick-1.2)*(i/(N-1));
     const b=(0.72 + 0.34*Math.abs(Math.sin(i/(N-1)*Math.PI*4))).toFixed(2);
     body+=`<div class="slice" style="transform:translateZ(${z.toFixed(2)}px); filter:brightness(${b})"></div>`;
   }
-  return `<div class="coin3d shape-${shape}${isStatic?' static':''}" style="${vars}">
-    <div class="coin" role="button" tabindex="0" aria-label="${title} coin — drag to spin">
+  return `<div class="coin3d${isStatic?' static':''}" style="${vars}">
+    <div class="coin" role="button" tabindex="0" aria-label="${title} badge — drag to spin">
       <div class="coin-body">${body}</div>
       <div class="coin-face back"></div>
       <div class="coin-face front"></div>
-      <div class="coin-content back">${back}</div>
-      <div class="coin-content front">${eng}</div>
     </div></div>`;
 }
 
 /* curated taste of 50+ — [metal, shape, scene, fullName, funline, requirement(short), coinName(short)] */
 const BADGES = [
-  ['silver','circle',  SC.plane,    'Takeoff','Wheels up.','First flight','Takeoff'],
-  ['bronze','octagon', SC.globe,    'Explorer','5 countries deep.','5 countries','Explorer'],
-  ['gold','star',      SC.trophy,   'World Traveler','25 stamps strong.','25 countries','World'],
-  ['sapphire','circle',SC.orbit,    'Around the World','50,000 km. Respect.','50,000 km','Worldwide'],
-  ['steel','hex',      SC.train,    'Rail Rider','Track addict.','10 train trips','Rail Rider'],
-  ['emerald','shield', SC.cityhop,  'City Hopper','10 cities, no chill.','10 cities','City Hopper'],
-  ['platinum','hex',   SC.polar,    'Polar Pioneer','You went there?!','Antarctica','Polar'],
-  ['copper','shield',  SC.downunder,'Down Under','G’day, legend.','Oceania','Down Under'],
-  ['gold','banner',    SC.flag,     'Border Crosser','New stamp unlocked.','Cross a border','Border'],
-  ['emerald','rounded',SC.coffee,   'Local Brew','Caffeine secured.','Find a local café','Local Brew'],
-  ['steel','gem',      SC.moon,     'Night Owl','3am check-in.','Travel past midnight','Night Owl'],
-  ['bronze','rounded', SC.backpack, 'Weekend Warrior','3 trips, 1 month.','3 trips / month','Weekender'],
-  ['amethyst','star',  SC.crown,    'Legend','Untouchable.','50 countries','Legend'],
+  ['silver',  SIL.plane,    'Takeoff','Wheels up.','First flight','Takeoff'],
+  ['bronze',  SIL.globe,    'Explorer','5 countries deep.','5 countries','Explorer'],
+  ['gold',    SIL.trophy,   'World Traveler','25 stamps strong.','25 countries','World'],
+  ['sapphire',SIL.orbit,    'Around the World','50,000 km. Respect.','50,000 km','Worldwide'],
+  ['steel',   SIL.train,    'Rail Rider','Track addict.','10 train trips','Rail Rider'],
+  ['emerald', SIL.cityhop,  'City Hopper','10 cities, no chill.','10 cities','City Hopper'],
+  ['platinum',SIL.polar,    'Polar Pioneer','You went there?!','Antarctica','Polar'],
+  ['copper',  SIL.downunder,'Down Under','G’day, legend.','Oceania','Down Under'],
+  ['gold',    SIL.flag,     'Border Crosser','New stamp unlocked.','Cross a border','Border'],
+  ['emerald', SIL.coffee,   'Local Brew','Caffeine secured.','Find a local café','Local Brew'],
+  ['steel',   SIL.moon,     'Night Owl','3am check-in.','Travel past midnight','Night Owl'],
+  ['bronze',  SIL.backpack, 'Weekend Warrior','3 trips, 1 month.','3 trips / month','Weekender'],
+  ['amethyst',SIL.crown,    'Legend','Untouchable.','50 countries','Legend'],
 ];
-document.getElementById('badgeGrid').innerHTML = BADGES.map(([metal,shape,scene,nm,fun,req,short]) => `
+document.getElementById('badgeGrid').innerHTML = BADGES.map(([metal,scene,nm,fun,req,short]) => `
   <div class="bcard"><div class="shine"></div>
-    ${coinHTML({metal,shape,scene,title:short,sub:req,size:104})}
-    <div class="nm">${nm}</div><div class="ds">${fun}</div></div>`).join('');
+    ${coinHTML({metal,scene,title:short,size:104})}
+    <div class="nm">${nm}</div><div class="ds">${fun}</div><div class="req">${req}</div></div>`).join('');
 
-/* boarding-pass back → a real Takeoff coin */
+/* boarding-pass back → a real Takeoff medal */
 const passEm = document.querySelector('.pass-em');
-if (passEm) passEm.outerHTML = `<div class="pass-medal">${coinHTML({metal:'silver',shape:'circle',scene:SC.plane,title:'Takeoff',sub:'First flight',size:96})}</div>`;
+if (passEm) passEm.outerHTML = `<div class="pass-medal">${coinHTML({metal:'silver',scene:SIL.plane,title:'Takeoff',size:96})}</div>`;
 
 /* ---------- coins are real 3D objects: drag to spin, tap to flip ---------- */
 (function(){
@@ -889,12 +862,12 @@ pass.addEventListener('keydown', (e) => { if((e.key==='Enter'||e.key===' ') && !
 
 /* ---------- rank sticky scroll → coin morphs metal/shape per tier ---------- */
 const RANKS = [
-  {n:'Explorer',      metal:'bronze',  shape:'octagon',scene:SC.compass, mi:'0–2K mi',     desc:'Your first stamps. Log a trip and the journey begins.'},
-  {n:'Pathfinder',    metal:'steel',   shape:'hex',    scene:SC.map,     mi:'2K–8K mi',    desc:'Finding your rhythm — a few countries down, momentum building.'},
-  {n:'Navigator',     metal:'silver',  shape:'gem',    scene:SC.globe,   mi:'8K–20K mi',   desc:'You know your way around. Verified miles really adding up.'},
-  {n:'Trailblazer',   metal:'copper',  shape:'shield', scene:SC.flame,   mi:'20K–50K mi',  desc:'Off the beaten path. You travel more than almost anyone.'},
-  {n:'World Traveler',metal:'gold',    shape:'star',   scene:SC.trophy,  mi:'50K–100K mi', desc:'A passport full of proof. Top-tier explorer status.'},
-  {n:'Legend',        metal:'amethyst',shape:'star',   scene:SC.crown,   mi:'100K+ mi',    desc:'The summit. 100,000+ verified miles. Untouchable.'},
+  {n:'Explorer',      metal:'bronze',  scene:SIL.compass, mi:'0–2K mi',     desc:'Your first stamps. Log a trip and the journey begins.'},
+  {n:'Pathfinder',    metal:'steel',   scene:SIL.map,     mi:'2K–8K mi',    desc:'Finding your rhythm — a few countries down, momentum building.'},
+  {n:'Navigator',     metal:'silver',  scene:SIL.globe,   mi:'8K–20K mi',   desc:'You know your way around. Verified miles really adding up.'},
+  {n:'Trailblazer',   metal:'copper',  scene:SIL.flame,   mi:'20K–50K mi',  desc:'Off the beaten path. You travel more than almost anyone.'},
+  {n:'World Traveler',metal:'gold',    scene:SIL.trophy,  mi:'50K–100K mi', desc:'A passport full of proof. Top-tier explorer status.'},
+  {n:'Legend',        metal:'amethyst',scene:SIL.crown,   mi:'100K+ mi',    desc:'The summit. 100,000+ verified miles. Untouchable.'},
 ];
 const rankCoin = document.getElementById('rankCoin');
 const orbLbl = document.getElementById('orbLbl');
@@ -903,7 +876,7 @@ const stage = document.getElementById('rankStage');
 /* build the scroll-through ladder of mini medals (replaces the old emoji list) */
 document.getElementById('ladder').innerHTML = RANKS.map((r,i) => `
   <div class="rank-item" data-i="${i}">
-    ${coinHTML({metal:r.metal, shape:r.shape, scene:r.scene, title:r.n, sub:r.mi, size:50, static:true})}
+    ${coinHTML({metal:r.metal, scene:r.scene, title:r.n, size:50, static:true})}
     <div><div class="nm">${r.n}</div><div class="desc">${r.desc}</div></div>
   </div>`).join('');
 const items = [...document.querySelectorAll('.rank-item')];
@@ -912,7 +885,7 @@ let curTier = -1;
 function setRank(idx){
   const r = RANKS[idx];
   const size = Math.min(290, Math.round(innerWidth * 0.6));
-  rankCoin.innerHTML = coinHTML({metal:r.metal, shape:r.shape, scene:r.scene, title:r.n, sub:r.mi, size});
+  rankCoin.innerHTML = coinHTML({metal:r.metal, scene:r.scene, title:r.n, size});
   orbLbl.textContent = r.n;
   items.forEach(it => it.classList.toggle('on', +it.dataset.i === idx));
 }
