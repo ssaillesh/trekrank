@@ -146,10 +146,11 @@ struct CreateTripBody: Encodable {
     var notes: String?
     var isPublic: Bool = true
     // Resolved on-device (CLGeocoder) so the server skips its slow geocoding.
-    var originLat: Double?
-    var originLng: Double?
-    var destLat: Double?
-    var destLng: Double?
+    var originLat: Double? = nil
+    var originLng: Double? = nil
+    var destLat: Double? = nil
+    var destLng: Double? = nil
+    var distanceKm: Double? = nil   // actual recorded distance (overrides server calc)
 
     enum CodingKeys: String, CodingKey {
         case title, notes
@@ -165,6 +166,7 @@ struct CreateTripBody: Encodable {
         case originLng = "origin_lng"
         case destLat = "dest_lat"
         case destLng = "dest_lng"
+        case distanceKm = "distance_km"
     }
 }
 
@@ -259,17 +261,24 @@ struct FeedBadge: Codable {
     }
 }
 
+struct FeedRecommendation: Codable {
+    let text: String
+    let city: String?
+    let country: String?
+}
+
 struct FeedItem: Codable, Identifiable {
     let id: String
     let eventType: String
     let user: LeaderboardUser
     let trip: FeedTrip?
     let badge: FeedBadge?
+    let recommendation: FeedRecommendation?
     let photoUrl: String?
     let createdAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, user, trip, badge
+        case id, user, trip, badge, recommendation
         case eventType = "event_type"
         case photoUrl = "photo_url"
         case createdAt = "created_at"

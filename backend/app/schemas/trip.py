@@ -20,6 +20,9 @@ class TripCreate(BaseModel):
     origin_lng: float | None = Field(default=None, ge=-180, le=180)
     dest_lat: float | None = Field(default=None, ge=-90, le=90)
     dest_lng: float | None = Field(default=None, ge=-180, le=180)
+    # Actual distance travelled (km), e.g. from a recorded GPS route. When set,
+    # the worker keeps it instead of computing straight-line origin→dest.
+    distance_km: float | None = Field(default=None, ge=0)
 
 
 class TripUpdate(BaseModel):

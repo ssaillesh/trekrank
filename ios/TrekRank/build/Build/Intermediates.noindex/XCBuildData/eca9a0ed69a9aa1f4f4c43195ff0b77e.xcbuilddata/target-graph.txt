@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-Target 'TrekRank' in project 'TrekRank' (no dependencies)

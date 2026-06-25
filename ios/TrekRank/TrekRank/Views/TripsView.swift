@@ -10,26 +10,20 @@ struct Celebration: Identifiable {
 final class TripsViewModel: ObservableObject {
     @Published var trips: [Trip] = []
     @Published var loading = false
-    @Published var celebration: Celebration?
 
     private var pollTask: Task<Void, Never>?
-    /// Earned badge IDs as of the last sync; nil until the first sync so we
-    /// don't "celebrate" the badges the user already had on launch.
-    private var knownEarnedIDs: Set<String>?
 
     func load() async {
         loading = true
         if let list = try? await APIClient.shared.trips() { trips = list.items }
         loading = false
-        await syncBadges()
         schedulePollIfNeeded()
     }
 
     /// Geocoding + distance are computed asynchronously on the server, so a
     /// freshly-added trip comes back as "processing" with no distance yet.
     /// While any trip is still processing, quietly re-fetch every ~1.2s so the
-    /// distance appears on its own — no manual pull-to-refresh needed. Stops as
-    /// soon as nothing is processing (or after ~18s as a safety cap).
+    /// distance appears on its own. Stops once nothing is processing (~18s cap).
     private func schedulePollIfNeeded() {
         pollTask?.cancel()
         guard trips.contains(where: { $0.status == "processing" }) else { return }
@@ -38,27 +32,9 @@ final class TripsViewModel: ObservableObject {
                 try? await Task.sleep(nanoseconds: 1_200_000_000)
                 guard let self, !Task.isCancelled else { return }
                 if let list = try? await APIClient.shared.trips() { self.trips = list.items }
-                if !self.trips.contains(where: { $0.status == "processing" }) {
-                    await self.syncBadges()   // trip finished → maybe a new achievement
-                    return
-                }
+                if !self.trips.contains(where: { $0.status == "processing" }) { return }
             }
         }
-    }
-
-    /// Fetch the badge catalog and, if any newly-earned badge appeared since the
-    /// last sync, queue a celebration. The first call only establishes a
-    /// baseline (no celebration for pre-existing badges).
-    private func syncBadges() async {
-        guard let badges = try? await APIClient.shared.badges() else { return }
-        let earned = Set(badges.filter { $0.earned }.map { $0.id })
-        if let known = knownEarnedIDs {
-            let newIDs = earned.subtracting(known)
-            if !newIDs.isEmpty {
-                celebration = Celebration(badges: badges.filter { newIDs.contains($0.id) })
-            }
-        }
-        knownEarnedIDs = earned
     }
 
     func delete(_ trip: Trip) async {
@@ -68,11 +44,11 @@ final class TripsViewModel: ObservableObject {
     }
 }
 
-struct TripsView: View {
-    var goToFeed: () -> Void = {}
-
+/// Management list of the user's own trips (distances, delete), opened as a
+/// sheet from the Home feed. Logging happens on the feed itself.
+struct MyTripsView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var vm = TripsViewModel()
-    @State private var showAdd = false
     @AppStorage(Units.storageKey) private var useMiles = false  // re-render on unit change
 
     var body: some View {
@@ -80,7 +56,7 @@ struct TripsView: View {
             List {
                 if vm.trips.isEmpty && !vm.loading {
                     ContentUnavailableView("No trips yet", systemImage: "airplane.departure",
-                        description: Text("Tap + to log your first trip."))
+                        description: Text("Log a trip from the Home tab."))
                         .listRowBackground(Color.clear)
                 }
                 ForEach(vm.trips) { trip in
@@ -95,26 +71,10 @@ struct TripsView: View {
             }
             .listStyle(.plain)
             .trekScreen()
-            .navigationTitle("Trips")
+            .navigationTitle("My Trips")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showAdd = true } label: {
-                        Image(systemName: "plus.circle.fill").font(.title2)
-                            .foregroundStyle(TrekTheme.accent)
-                    }
-                }
-            }
-            .sheet(isPresented: $showAdd) {
-                AddTripView { await vm.load() }
-            }
-            .sheet(item: $vm.celebration) { celebration in
-                AchievementView(badges: celebration.badges) {
-                    vm.celebration = nil
-                    goToFeed()
-                } onDismiss: {
-                    vm.celebration = nil
-                }
-                .presentationDetents([.height(440)])
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
             .refreshable { await vm.load() }
             .task { await vm.load() }

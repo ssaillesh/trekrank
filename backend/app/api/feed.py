@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, ActivityFeed, Trip, Badge
 from app.middleware.auth import get_current_user
-from app.schemas.social import FeedResponse, FeedItem, FeedTrip, FeedBadge
+from app.schemas.social import (
+    FeedResponse, FeedItem, FeedTrip, FeedBadge, FeedRecommendation, RecommendationCreate,
+)
 from app.schemas.user import UserPublic
 from app.services.friends import friend_ids
 
@@ -41,6 +43,10 @@ def _render(db: Session, rows, users_cache: dict) -> list[FeedItem]:
             badge = db.get(Badge, af.badge_id)
             if badge:
                 item.badge = FeedBadge(id=badge.id, name=badge.name, icon_url=badge.icon_url)
+        if af.event_type == "recommendation" and af.activity_metadata:
+            md = af.activity_metadata
+            item.recommendation = FeedRecommendation(
+                text=md.get("text", ""), city=md.get("city"), country=md.get("country"))
         items.append(item)
     return items
 
@@ -73,6 +79,23 @@ def friends_feed(
     # their friends', newest first — so achievements show up on their own feed.
     ids = friend_ids(db, user.id) + [user.id]
     return _paginate(db, ids, cursor, limit)
+
+
+@router.post("/recommend", response_model=FeedItem, status_code=201)
+def create_recommendation(
+    body: RecommendationCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Post a spot recommendation to the feed."""
+    af = ActivityFeed(
+        user_id=user.id, event_type="recommendation",
+        activity_metadata={"text": body.text, "city": body.city, "country": body.country},
+    )
+    db.add(af)
+    db.commit()
+    db.refresh(af)
+    return _render(db, [af], {})[0]
 
 
 @router.get("/me", response_model=FeedResponse)

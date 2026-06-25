@@ -2,11 +2,11 @@
 from collections import defaultdict
 from datetime import date
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 from sqlalchemy.orm import Session
 
 from app.models import User, Trip, VisitedCountry, VisitedCity
-from app.data.countries import continent_of
+from app.data.countries import continent_of, country_name
 
 
 def compute_streak(trip_months: set[tuple[int, int]]) -> tuple[int, int]:
@@ -49,6 +49,41 @@ def compute_streak(trip_months: set[tuple[int, int]]) -> tuple[int, int]:
     return current, longest
 
 
+def rebuild_visited_tables(db: Session, user: User) -> None:
+    """Recompute visited_countries / visited_cities from scratch based on the
+    user's CURRENT trips. Needed after deleting a trip so the visit counts and
+    country/city totals stay accurate (the per-trip upsert only increments)."""
+    db.execute(delete(VisitedCountry).where(VisitedCountry.user_id == user.id))
+    db.execute(delete(VisitedCity).where(VisitedCity.user_id == user.id))
+
+    trips = db.execute(select(Trip).where(Trip.user_id == user.id)).scalars().all()
+    countries: dict[str, dict] = {}
+    cities: dict[tuple[str, str], dict] = {}
+    for t in trips:
+        c = countries.setdefault(t.dest_country, {"first": t.start_date, "count": 0})
+        c["count"] += 1
+        c["first"] = min(c["first"], t.start_date)
+
+        ckey = (t.dest_city, t.dest_country)
+        ci = cities.setdefault(ckey, {"first": t.start_date, "count": 0,
+                                      "lat": t.dest_lat, "lng": t.dest_lng})
+        ci["count"] += 1
+        ci["first"] = min(ci["first"], t.start_date)
+        if ci["lat"] is None and t.dest_lat is not None:
+            ci["lat"], ci["lng"] = t.dest_lat, t.dest_lng
+
+    for code, v in countries.items():
+        db.add(VisitedCountry(user_id=user.id, country_code=code,
+                              country_name=country_name(code),
+                              first_visited=v["first"], visit_count=v["count"]))
+    for (city, code), v in cities.items():
+        vc = VisitedCity(user_id=user.id, city_name=city, country_code=code,
+                         first_visited=v["first"], visit_count=v["count"])
+        vc.lat, vc.lng = v["lat"], v["lng"]
+        db.add(vc)
+    db.flush()
+
+
 def recalculate_user_stats(db: Session, user: User) -> None:
     """Recompute and persist the user's cached stat columns from source tables."""
     total_countries = db.scalar(
@@ -75,7 +110,8 @@ def recalculate_user_stats(db: Session, user: User) -> None:
     user.total_trips = int(total_trips)
     user.total_km = float(total_km)
     user.current_streak = current_streak
-    user.longest_streak = max(longest_streak, user.longest_streak or 0)
+    # Recompute fresh from the user's current trips so deletions update it too.
+    user.longest_streak = longest_streak
     db.add(user)
     db.flush()
 

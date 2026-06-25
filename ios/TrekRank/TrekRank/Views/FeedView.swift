@@ -13,13 +13,48 @@ final class FeedViewModel: ObservableObject {
     @Published var searching = false
     @Published var requested: Set<String> = []   // usernames a request was sent to
 
+    // Achievement celebration (a trip just unlocked one or more badges)
+    @Published var celebration: Celebration?
+
     private var searchTask: Task<Void, Never>?
+    /// Earned badge IDs as of the last sync; nil until the first sync so we
+    /// don't "celebrate" the badges the user already had on launch.
+    private var knownEarnedIDs: Set<String>?
 
     func load() async {
         loading = true; error = nil
         do { items = try await APIClient.shared.feed().items }
         catch { self.error = (error as? APIError)?.errorDescription ?? error.localizedDescription }
         loading = false
+        await syncBadges()
+    }
+
+    /// Called after the user logs a trip from the feed: show the new post right
+    /// away, then keep refreshing while the server geocodes it (distance + any
+    /// badges land within a couple seconds), surfacing an achievement popup.
+    func refreshAfterAdd() async {
+        await load()
+        for _ in 0..<15 {
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            let processing = ((try? await APIClient.shared.trips())?.items ?? [])
+                .contains { $0.status == "processing" }
+            await load()
+            if !processing { break }
+        }
+    }
+
+    /// If any newly-earned badge appeared since the last sync, queue a
+    /// celebration. The first call only establishes a baseline.
+    private func syncBadges() async {
+        guard let badges = try? await APIClient.shared.badges() else { return }
+        let earned = Set(badges.filter { $0.earned }.map { $0.id })
+        if let known = knownEarnedIDs {
+            let newIDs = earned.subtracting(known)
+            if !newIDs.isEmpty {
+                celebration = Celebration(badges: badges.filter { newIDs.contains($0.id) })
+            }
+        }
+        knownEarnedIDs = earned
     }
 
     /// Client-side filter of loaded posts by username / city / country.
@@ -63,6 +98,9 @@ struct FeedView: View {
     @StateObject private var vm = FeedViewModel()
     @State private var query = ""
     @State private var scope: FeedScope = .posts
+    @State private var showAdd = false
+    @State private var showMyTrips = false
+    @State private var showRecommend = false
 
     var body: some View {
         NavigationStack {
@@ -77,8 +115,24 @@ struct FeedView: View {
                 .padding(.horizontal).padding(.top, 8)
             }
             .trekScreen()
-            .navigationTitle("Feed")
+            .navigationTitle("Home")
             .navigationDestination(for: String.self) { PublicProfileView(username: $0) }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showMyTrips = true } label: {
+                        Image(systemName: "airplane").foregroundStyle(TrekTheme.accent)
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button { showAdd = true } label: { Label("Log a trip", systemImage: "airplane") }
+                        Button { showRecommend = true } label: { Label("Recommend a spot", systemImage: "lightbulb") }
+                    } label: {
+                        Image(systemName: "plus.circle.fill").font(.title2)
+                            .foregroundStyle(TrekTheme.accent)
+                    }
+                }
+            }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
                         prompt: scope == .people ? "Search people to add" : "Search posts")
             .searchScopes($scope) {
@@ -89,6 +143,23 @@ struct FeedView: View {
             }
             .onChange(of: scope) { _, new in
                 if new == .people { vm.searchPeople(query) }
+            }
+            .sheet(isPresented: $showAdd) {
+                AddTripView { await vm.refreshAfterAdd() }
+            }
+            .sheet(isPresented: $showMyTrips) {
+                MyTripsView()
+            }
+            .sheet(isPresented: $showRecommend) {
+                RecommendComposeView { await vm.load() }
+            }
+            .sheet(item: $vm.celebration) { celebration in
+                AchievementView(badges: celebration.badges) {
+                    vm.celebration = nil   // already on the feed; just reveal it
+                } onDismiss: {
+                    vm.celebration = nil
+                }
+                .presentationDetents([.height(440)])
             }
             .refreshable { await vm.load() }
             .overlay { if vm.loading && vm.items.isEmpty && scope == .posts { ProgressView().tint(TrekTheme.accent) } }
@@ -182,7 +253,12 @@ struct FeedRow: View {
                     .background(TrekTheme.accent.opacity(0.12), in: Circle())
                 VStack(alignment: .leading, spacing: 4) {
                     Text("@\(item.user.username)").font(.subheadline.bold())
-                    Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                    Text(detail).font(.subheadline)
+                        .foregroundStyle(item.recommendation == nil ? .secondary : .primary)
+                    if let place = recommendationPlace {
+                        Label(place, systemImage: "mappin.and.ellipse")
+                            .font(.caption2).foregroundStyle(TrekTheme.accent)
+                    }
                     Text(RelativeDate.string(item.createdAt)).font(.caption2).foregroundStyle(.tertiary)
                 }
                 Spacer()
@@ -194,17 +270,24 @@ struct FeedRow: View {
         switch item.eventType {
         case "badge_earned": return "rosette"
         case "new_trip": return "airplane"
+        case "recommendation": return "lightbulb.fill"
         default: return "sparkle"
         }
     }
 
     private var detail: String {
+        if let r = item.recommendation { return r.text }
         if let t = item.trip {
             let km = t.distanceKm.map { " · \(Int($0)) km" } ?? ""
             return "Logged a trip to \(t.destCity), \(t.destCountry)\(km)"
         }
         if let b = item.badge { return "Earned the “\(b.name)” badge" }
         return item.eventType
+    }
+
+    private var recommendationPlace: String? {
+        guard let r = item.recommendation, let city = r.city, !city.isEmpty else { return nil }
+        return city + (r.country.map { ", \($0)" } ?? "")
     }
 }
 
@@ -217,5 +300,59 @@ enum RelativeDate {
         let rel = RelativeDateTimeFormatter()
         rel.unitsStyle = .short
         return rel.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+/// Compose + post a spot recommendation to the feed.
+struct RecommendComposeView: View {
+    @Environment(\.dismiss) private var dismiss
+    var onPosted: () async -> Void
+
+    @State private var place: SelectedPlace?
+    @State private var text = ""
+    @State private var posting = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Spot (optional)") {
+                    PlaceSearchField(placeholder: "Which place are you recommending?",
+                                     selection: $place)
+                }
+                Section("Your recommendation") {
+                    TextField("Share a tip about this place…", text: $text, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+                if let error { Text(error).foregroundStyle(.red).font(.caption) }
+            }
+            .scrollContentBackground(.hidden)
+            .background(ScreenBackground())
+            .navigationTitle("Recommend a spot")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Post") { post() }
+                        .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty || posting)
+                }
+            }
+        }
+    }
+
+    private func post() {
+        posting = true; error = nil
+        Task {
+            do {
+                try await APIClient.shared.recommend(
+                    text: text.trimmingCharacters(in: .whitespacesAndNewlines),
+                    city: place?.city, country: place?.countryCode)
+                await onPosted()
+                dismiss()
+            } catch {
+                self.error = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+            posting = false
+        }
     }
 }

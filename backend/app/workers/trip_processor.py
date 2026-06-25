@@ -100,7 +100,9 @@ def process_trip_sync(trip_id: str) -> None:
             trip.dest_lat, trip.dest_lng = dest[0], dest[1]
         if origin:
             trip.origin_lat, trip.origin_lng = origin[0], origin[1]
-        if origin and dest:
+        # Keep a client-supplied distance (e.g. a recorded GPS route); otherwise
+        # compute straight-line distance between origin and destination.
+        if origin and dest and trip.distance_km is None:
             trip.distance_km = distance_km(origin[0], origin[1], dest[0], dest[1])
         db.add(trip)
         db.flush()

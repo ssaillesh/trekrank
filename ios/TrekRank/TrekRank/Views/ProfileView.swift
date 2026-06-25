@@ -35,6 +35,9 @@ struct ProfileView: View {
                         Text(bio).font(.subheadline)
                     }
                     ProfileStatsRow(profile: session.profile)
+                    if let username = session.profile?.username {
+                        ProfileMapCard(username: username)
+                    }
                     shareSection
                     AchievementsShowcase(badges: vm.badges)
                 }
@@ -108,6 +111,7 @@ struct PublicProfileView: View {
                     Text(bio).font(.subheadline)
                 }
                 ProfileStatsRow(profile: vm.profile)
+                ProfileMapCard(username: username)
                 AchievementsShowcase(badges: vm.badges)
             }
             .padding()

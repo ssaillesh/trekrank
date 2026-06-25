@@ -56,6 +56,7 @@ def create_trip(body: TripCreate, user: User = Depends(get_current_user), db: Se
         end_date=body.end_date, is_public=body.is_public, status="processing",
         origin_lat=body.origin_lat, origin_lng=body.origin_lng,
         dest_lat=body.dest_lat, dest_lng=body.dest_lng,
+        distance_km=body.distance_km,
     )
     db.add(trip)
     db.commit()
@@ -138,10 +139,17 @@ def delete_trip(trip_id: str, user: User = Depends(get_current_user), db: Sessio
     trip = _owned_trip(db, trip_id, user)
     db.delete(trip)
     db.commit()
-    # Stats recompute on next trip; for immediacy we could re-run here.
-    from app.services.stats import recalculate_user_stats
+    # Re-derive everything from the remaining trips so all values stay correct:
+    # visited countries/cities, cached stat columns, then the Redis leaderboards.
+    from app.services.stats import rebuild_visited_tables, recalculate_user_stats
+    from app.services import leaderboard
+    rebuild_visited_tables(db, user)
     recalculate_user_stats(db, user)
     db.commit()
+    try:
+        leaderboard.rebuild_for_user(db, user)
+    except Exception:
+        pass
 
 
 @router.post("/{trip_id}/photos", response_model=list[PhotoOut], status_code=201)

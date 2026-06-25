@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.user import UserPublic
 
@@ -53,12 +53,25 @@ class FeedBadge(BaseModel):
     icon_url: str | None = None
 
 
+class FeedRecommendation(BaseModel):
+    text: str
+    city: str | None = None
+    country: str | None = None
+
+
+class RecommendationCreate(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+    city: str | None = Field(default=None, max_length=100)
+    country: str | None = Field(default=None, max_length=100)
+
+
 class FeedItem(BaseModel):
     id: str
     event_type: str
     user: UserPublic
     trip: FeedTrip | None = None
     badge: FeedBadge | None = None
+    recommendation: FeedRecommendation | None = None
     photo_url: str | None = None
     created_at: datetime
 
