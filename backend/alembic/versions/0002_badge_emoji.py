@@ -14,7 +14,13 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("badges", sa.Column("emoji", sa.String(length=16), nullable=True))
+    # Idempotent: a fresh DB's 0001 migration runs Base.metadata.create_all()
+    # against the *current* models, which already include this column. Only add
+    # it when missing so the chain also applies cleanly to older databases.
+    bind = op.get_bind()
+    cols = [c["name"] for c in sa.inspect(bind).get_columns("badges")]
+    if "emoji" not in cols:
+        op.add_column("badges", sa.Column("emoji", sa.String(length=16), nullable=True))
 
 
 def downgrade() -> None:

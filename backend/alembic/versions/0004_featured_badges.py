@@ -15,10 +15,14 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "users",
-        sa.Column("featured_badges", JSONB, nullable=False, server_default="[]"),
-    )
+    # Idempotent: 0001's create_all() already adds this column on a fresh DB.
+    bind = op.get_bind()
+    cols = [c["name"] for c in sa.inspect(bind).get_columns("users")]
+    if "featured_badges" not in cols:
+        op.add_column(
+            "users",
+            sa.Column("featured_badges", JSONB, nullable=False, server_default="[]"),
+        )
 
 
 def downgrade() -> None:
