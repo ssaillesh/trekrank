@@ -288,6 +288,10 @@
     color:var(--gold); background:rgba(255,209,102,.12); border:1px solid rgba(255,209,102,.3);
     padding:5px 10px; border-radius:999px;}
   .inv .place-btn:hover{background:rgba(255,209,102,.2);}
+  .inv-actions{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
+  .inv .del-btn{display:inline-block; font-size:11.5px; font-weight:700; cursor:pointer; color:var(--muted2);
+    background:rgba(255,255,255,.04); border:1px solid var(--hair); padding:5px 10px; border-radius:999px;}
+  .inv .del-btn:hover{color:var(--rose); border-color:rgba(255,122,156,.4); background:rgba(255,122,156,.1);}
   .inv-tabs{display:flex; gap:6px; margin-bottom:14px;}
   .inv-tabs button{flex:1; padding:8px; border-radius:10px; border:1px solid var(--card-brd); cursor:pointer;
     background:rgba(255,255,255,.04); color:var(--muted); font-size:12px; font-weight:700;}
@@ -1150,12 +1154,30 @@ function renderInventory(){
     const badge = p.verified ? '<span class="badge ok">✓ Verified</span>'
       : (p.source==='manual' ? '<span class="badge manual">● Manual</span>' : '<span class="badge no">Unverified</span>');
     const placeBtn = !p.verified
-      ? `<div><span class="place-btn" data-place="${p.photo_id}">📍 ${p.lat!=null?'Move on map':'Place on map'}</span></div>` : '';
-    return `<div class="inv">${img}<div class="meta"><b>${escapeHtml(where)}</b><span class="when">${escapeHtml(when)}</span><br>${badge}${placeBtn}</div></div>`;
+      ? `<span class="place-btn" data-place="${p.photo_id}">📍 ${p.lat!=null?'Move on map':'Place on map'}</span>` : '';
+    const delBtn = `<span class="del-btn" data-del="${p.trip_id}:${p.photo_id}">🗑 Delete</span>`;
+    return `<div class="inv">${img}<div class="meta"><b>${escapeHtml(where)}</b><span class="when">${escapeHtml(when)}</span><br>${badge}
+      <div class="inv-actions">${placeBtn}${delBtn}</div></div></div>`;
   }).join('');
   $('invList').innerHTML = tabs + cards;
   $('invList').querySelectorAll('.inv-tabs button').forEach(b => b.onclick = () => { invFilter=b.dataset.t; renderInventory(); });
   $('invList').querySelectorAll('.place-btn').forEach(b => b.onclick = () => startPlacing(b.dataset.place));
+  $('invList').querySelectorAll('.del-btn').forEach(b => b.onclick = () => {
+    const [tripId, photoId] = b.dataset.del.split(':');
+    deletePhoto(tripId, photoId);
+  });
+}
+
+async function deletePhoto(tripId, photoId){
+  if (!confirm('Delete this photo? This removes it from your map and inventory.')) return;
+  try{
+    const r = await fetch(`${API_BASE}/trips/${tripId}/photos/${photoId}`, {
+      method:'DELETE', headers:{Authorization:'Bearer '+store.token} });
+    if (!r.ok && r.status!==204) throw new Error();
+    toast('Photo deleted');
+    await loadInventory();
+    await loadTravel();
+  }catch(e){ toast('Could not delete that photo.'); }
 }
 
 function startPlacing(photoId){
