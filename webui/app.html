@@ -128,8 +128,25 @@
   .chip{display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--card-brd);
     border-radius:999px; padding:6px 8px 6px 14px; backdrop-filter:var(--glass); -webkit-backdrop-filter:var(--glass);
     font-size:13px; font-weight:600; box-shadow:var(--shadow);}
+  .chip{cursor:pointer;}
   .chip .av{width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2));
     display:flex; align-items:center; justify-content:center; font-weight:800; color:#04211b; font-size:12px;}
+  .chip .caret{color:var(--muted2); font-size:11px; margin-left:2px;}
+
+  /* account dropdown */
+  .menu{position:fixed; top:64px; right:20px; z-index:30; width:248px; padding:8px;
+    background:linear-gradient(180deg,var(--card-2),var(--card)); border:1px solid var(--card-brd);
+    border-radius:18px; box-shadow:var(--shadow); backdrop-filter:var(--glass);
+    animation:panelIn .3s var(--ease) both;}
+  .menu-head{display:flex; align-items:center; gap:11px; padding:10px 10px 12px; border-bottom:1px solid var(--hair); margin-bottom:6px;}
+  .menu-head .av{width:38px; height:38px; border-radius:50%; flex:0 0 auto;
+    background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#04211b; font-weight:800;
+    display:flex; align-items:center; justify-content:center; font-size:16px;}
+  .menu-head b{display:block; font-size:14px;} .menu-head span{font-size:12px; color:var(--muted2); word-break:break-all;}
+  .menu-item{display:block; width:100%; text-align:left; border:0; background:transparent; color:var(--text);
+    font-size:14px; font-weight:600; padding:11px 12px; border-radius:11px; cursor:pointer; transition:background .15s;}
+  .menu-item:hover{background:rgba(255,255,255,.06);}
+  .menu-item.danger{color:var(--rose);} .menu-item.danger:hover{background:rgba(255,122,156,.12);}
   .btn{border:0; cursor:pointer; font-weight:750; font-size:14px; padding:11px 22px; border-radius:999px;
     background:linear-gradient(180deg,var(--accent),#39c9b3); color:#04211b;
     box-shadow:0 8px 24px -4px rgba(94,235,212,.5); transition:transform .2s var(--ease), box-shadow .2s var(--ease-soft);}
@@ -348,8 +365,16 @@
       <button data-view="hotspots">📡 Hotspots</button>
     </div>
     <div class="spacer"></div>
-    <div id="userChip" class="chip hidden"><span class="av" id="avatar">?</span><span id="chipName">—</span></div>
+    <button id="userChip" class="chip hidden" title="Account"><span class="av" id="avatar">?</span><span id="chipName">—</span><span class="caret">▾</span></button>
     <button class="btn" id="openUpload">＋ Upload</button>
+
+    <!-- account dropdown -->
+    <div class="menu hidden" id="acctMenu">
+      <div class="menu-head"><span class="av" id="mAvatar">?</span><div><b id="mName">—</b><span id="mEmail"></span></div></div>
+      <button class="menu-item" id="miSettings">⚙️ Profile settings</button>
+      <button class="menu-item" id="miHome">🏠 Set home location</button>
+      <button class="menu-item danger" id="miSignout">🚪 Sign out</button>
+    </div>
   </div>
 
   <!-- Full Google-Maps-style 2D map (zoom world → street). The only view now. -->
@@ -498,6 +523,22 @@
         <div class="msg" id="upMsg"></div>
         <div class="note">Screenshots and social-media downloads usually have GPS stripped, so they won't plot. Photos straight from a phone camera do.</div>
       </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal-bg hidden" id="settingsModal">
+    <div class="modal">
+      <span class="x" onclick="closeSettings()">×</span>
+      <h2>Profile <span class="grad">settings</span></h2>
+      <p class="lead">Update how you appear. Your username can't be changed.</p>
+      <label>Username</label><input id="setUsername" disabled />
+      <label>Display name</label><input id="setDisplay" placeholder="Your name" />
+      <label>Email</label><input id="setEmail" type="email" placeholder="you@example.com" />
+      <label>Home location</label><input id="setHome" placeholder="Search a city, e.g. Toronto" />
+      <button class="mbtn" id="setSave">Save changes</button>
+      <div class="msg" id="setMsg"></div>
+      <button class="mbtn" id="setSignout" style="margin-top:10px;background:rgba(255,122,156,.14);color:var(--rose);">🚪 Sign out</button>
     </div>
   </div>
 
@@ -1180,8 +1221,83 @@ function refreshChip(){
   } else {
     $('userChip').classList.add('hidden');
     $('openUpload').textContent = 'Sign in';
+    closeAcctMenu();
   }
 }
+
+/* ===================== ACCOUNT MENU + SETTINGS ===================== */
+let acctProfile = null;
+
+async function fetchProfile(){
+  if (acctProfile || !store.token) return acctProfile;
+  try{ acctProfile = await fetch(`${API_BASE}/users/me`, { headers:{Authorization:'Bearer '+store.token} }).then(r=>r.json()); }catch(e){}
+  return acctProfile;
+}
+function closeAcctMenu(){ $('acctMenu').classList.add('hidden'); }
+async function openAcctMenu(){
+  if (!store.token) return;
+  $('acctMenu').classList.remove('hidden');
+  $('mName').textContent = '@'+store.user;
+  $('mAvatar').textContent = store.user[0].toUpperCase();
+  await fetchProfile();
+  $('mEmail').textContent = (acctProfile && acctProfile.email) || '';
+}
+$('userChip').onclick = (e) => { e.stopPropagation();
+  $('acctMenu').classList.contains('hidden') ? openAcctMenu() : closeAcctMenu(); };
+document.addEventListener('click', e => {
+  if (!$('acctMenu').classList.contains('hidden') && !$('acctMenu').contains(e.target) && e.target!==$('userChip'))
+    closeAcctMenu();
+});
+
+function signOut(){
+  store.clear(); acctProfile = null;
+  closeAcctMenu(); closeSettings();
+  travelPoints = []; renderStats(null); renderMapMarkers(); refreshChip();
+  if (activeView==='inventory') loadInventory();
+  toast('Signed out');
+}
+$('miSignout').onclick = signOut;
+$('setSignout').onclick = signOut;
+
+$('miHome').onclick = () => {
+  closeAcctMenu();
+  document.querySelector('.nav button[data-view="globe"]').click();
+  homeEditing = true; renderHome();
+};
+
+$('miSettings').onclick = async () => {
+  closeAcctMenu();
+  await fetchProfile();
+  $('setUsername').value = store.user || '';
+  $('setDisplay').value = (acctProfile && acctProfile.display_name) || '';
+  $('setEmail').value = (acctProfile && acctProfile.email) || '';
+  const home = getHome(); $('setHome').value = (home && home.label) || '';
+  setMsg('setMsg','','');
+  $('settingsModal').classList.remove('hidden');
+};
+function closeSettings(){ $('settingsModal').classList.add('hidden'); }
+$('settingsModal').addEventListener('click', e => { if (e.target===$('settingsModal')) closeSettings(); });
+window.closeSettings = closeSettings;
+
+$('setSave').onclick = async () => {
+  setMsg('setMsg','Saving…','');
+  const body = {};
+  const dn = $('setDisplay').value.trim(); if (dn) body.display_name = dn;
+  const em = $('setEmail').value.trim();
+  if (em && (!acctProfile || em!==acctProfile.email)) body.email = em;
+  try{
+    if (Object.keys(body).length){
+      const r = await fetch(`${API_BASE}/users/me`, { method:'PATCH',
+        headers:{Authorization:'Bearer '+store.token,'Content-Type':'application/json'}, body:JSON.stringify(body) });
+      if (!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.detail||'Could not save'); }
+      acctProfile = await r.json();
+    }
+    const hq = $('setHome').value.trim();
+    if (hq){ const h = await geocodeCity(hq); if (h) saveHome(h); }
+    setMsg('setMsg','Saved ✓','ok');
+    setTimeout(closeSettings, 800);
+  }catch(e){ setMsg('setMsg', e.message, 'err'); }
+};
 
 /* ===================== UPLOAD MODAL ===================== */
 function openUpload(){ $('modal').classList.remove('hidden'); store.token ? showDrop() : showAuth(); }
@@ -1215,7 +1331,7 @@ $('authBtn').onclick = async () => {
     const d=await r.json();
     if(!r.ok) throw new Error(d.detail||'Auth failed');
     store.set(d.access_token, d.user.username);
-    refreshChip(); showDrop(); loadTravel();
+    acctProfile = null; refreshChip(); showDrop(); loadTravel();
   }catch(e){ setMsg('authMsg', e.message, 'err'); }
   finally{ $('authBtn').disabled=false; }
 };
