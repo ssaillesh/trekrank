@@ -9,6 +9,11 @@ import random
 from app.services import yelp
 from app.services.hotspots import fetch_hotspots
 from app.services import llm
+from app.services import weather as weather_svc
+from app.services import events as events_svc
+
+# Indoor-only activity set for wet/cold days.
+INDOOR_ACTIVITIES = "arcades,escapegames,bowling,poolhalls,lasertag,karaoke,trampoline,museums,aquariums"
 
 PRICE_COST = {"$": 15, "$$": 30, "$$$": 65, "$$$$": 110}
 PRICE_LEVEL = {"$": 1, "$$": 2, "$$$": 3, "$$$$": 4}
@@ -166,6 +171,13 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
     used = set(exclude or ())
     slots = _slots_for(vibe, time_of_day, group_type)
 
+    # Weather-aware: on a wet/cold day, keep it indoors — swap the outdoor scenic
+    # stop for a cosy cafe and force indoor activities.
+    wx = weather_svc.get_weather(lat, lng)
+    bad_weather = bool(wx and (wx["rainy"] or wx["cold"]))
+    if bad_weather:
+        slots = ["cafe" if s == "scenic" else s for s in slots]
+
     # Surface the hidden gem on the activity if there is one, else the last stop.
     gem_index = slots.index("activity") if "activity" in slots else len(slots) - 1
 
@@ -177,7 +189,7 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
         term_override = cat_override = None
         cz = cuisine_term(interests, dietary)
         if slot_key == "activity":
-            cat_override = activity_categories(group_type, vibe, interests)
+            cat_override = INDOOR_ACTIVITIES if bad_weather else activity_categories(group_type, vibe, interests)
             if interests and not cz:
                 term_override = interests          # e.g. "escape room"
         elif slot_key in ("dinner", "lunch") and cz:
@@ -221,12 +233,21 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
     for a, b in zip(stops, stops[1:]):
         spread += _haversine_km(a["lat"], a["lng"], b["lat"], b["lng"])
 
+    # Live events happening near here (concerts, games, comedy) — surfaced as
+    # options the guest can build around, not forced into the fixed stops.
+    events = []
+    if events_svc.available():
+        cls = events_svc.classification_for(vibe, interests)
+        events = events_svc.search_events(lat, lng, radius_km=25, size=8, classification=cls)[:3]
+
     plan = {
         "vibe": vibe, "budget": budget, "party_size": party_size, "currency": "USD",
         "estimated_cost": total(), "center": {"lat": lat, "lng": lng},
         "walk_km": round(spread, 1), "stops": stops,
+        "weather": (wx["summary"] if wx else None),
+        "events": events,
     }
-    _narrate(plan, interests, group_type, time_of_day, dietary)
+    _narrate(plan, interests, group_type, time_of_day, dietary, wx, events)
     return plan
 
 
@@ -246,7 +267,7 @@ def build_trip(*, days, lat, lng, budget, **opts):
 _START_HINT = {"morning": "10:00 AM", "afternoon": "1:00 PM", "night": "8:00 PM"}
 
 
-def _narrate(plan, interests, group_type, time_of_day, dietary):
+def _narrate(plan, interests, group_type, time_of_day, dietary, wx=None, events=None):
     stops = plan["stops"]
     if llm.available() and stops:
         listing = "\n".join(
@@ -260,7 +281,13 @@ def _narrate(plan, interests, group_type, time_of_day, dietary):
             f"time: {time_of_day}" if time_of_day else "",
             f"dietary: {dietary}" if dietary else "",
             f"they specifically want: {interests}" if interests else "",
+            f"weather today: {wx['summary']} (kept it indoors)" if wx and (wx.get("rainy") or wx.get("cold")) else "",
         ]))
+        ev_line = ""
+        if events:
+            ev_line = "Live events near here tonight: " + "; ".join(
+                f"{e['name']} at {e['venue']}" + (f" {e['time'][:5]}" if e.get('time') else "")
+                for e in events if e.get("name"))
         start = _START_HINT.get(time_of_day, "6:00 PM")
         msg = [
             {"role": "system", "content":
@@ -273,11 +300,14 @@ def _narrate(plan, interests, group_type, time_of_day, dietary):
              "stops = one per venue IN ORDER: a clock time (schedule them realistically from the "
              "start time, allowing travel + dwell) and 1-2 vivid, specific sentences on what to do "
              "there and why it fits. tip = one punchy closing line ('if it were my crew…'). "
+             "If a real live event is provided and fits the vibe, casually mention it as an "
+             "option in the intro or tip (with its time) — do NOT put it in stops. "
              "Confident, warm, concrete. No markdown."},
             {"role": "user", "content":
              f"Vibe: {plan['vibe']}. Budget: ${plan['budget']} for {plan['party_size']}. "
              f"Start around {start}. Context — {ctx or 'none given'}. "
-             f"All stops are within ~{plan['walk_km']}km of each other.\nVENUES:\n{listing}"},
+             f"All stops are within ~{plan['walk_km']}km of each other.\nVENUES:\n{listing}"
+             + (f"\n{ev_line}" if ev_line else "")},
         ]
         data = llm.chat_json(msg)
         if data and isinstance(data.get("stops"), list) and data["stops"]:

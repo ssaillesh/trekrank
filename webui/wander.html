@@ -76,6 +76,15 @@
   .stop .lbl{font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--accent);}
   .itin .tip{margin:2px 12px 14px; padding:12px 14px; border-radius:14px; font-size:13.5px; color:var(--text);
     background:linear-gradient(180deg,rgba(138,123,255,.14),rgba(94,235,212,.08)); border:1px solid var(--brd);}
+  .events{margin:0 12px 14px;}
+  .ev-h{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--hot); margin:4px 0 8px;}
+  .ev{display:flex; align-items:center; gap:10px; padding:11px 13px; border-radius:12px; margin-bottom:8px;
+    background:rgba(255,122,156,.08); border:1px solid rgba(255,122,156,.22); transition:.15s;}
+  .ev:hover{background:rgba(255,122,156,.14);}
+  .ev-body{flex:1; min-width:0;} .ev-body b{font-size:14px; display:block;}
+  .ev-meta{font-size:12px; color:var(--muted2);}
+  .ev-price{font-size:12px; font-weight:700; color:var(--text);}
+  .ev-go{font-size:12px; font-weight:800; color:var(--hot); white-space:nowrap;}
   .stop h4{margin:2px 0; font-size:16px; font-weight:750; letter-spacing:-.01em;}
   .stop .meta{font-size:12.5px; color:var(--muted2); display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
   .stop .why{font-size:13.5px; color:var(--muted); margin-top:5px;}
@@ -222,6 +231,24 @@ function stopHtml(s,i){
     </div></div>`;
 }
 
+function evWhen(ev){
+  const parts = [];
+  if (ev.date){ const d=new Date(ev.date+'T00:00'); parts.push(d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})); }
+  if (ev.time) parts.push(ev.time.slice(0,5));
+  return parts.join(' · ');
+}
+function eventsHtml(events){
+  if (!events || !events.length) return '';
+  const rows = events.map(ev => {
+    const meta = [ev.category, ev.venue, evWhen(ev)].filter(Boolean).map(esc).join(' · ');
+    const price = ev.price_min ? `<span class="ev-price">$${Math.round(ev.price_min)}+</span>` : '';
+    return `<a class="ev" href="${esc(ev.url||'#')}" target="_blank" rel="noopener">
+      <div class="ev-body"><b>${esc(ev.name)}</b><span class="ev-meta">${meta}</span></div>
+      ${price}<span class="ev-go">Tickets ›</span></a>`;
+  }).join('');
+  return `<div class="events"><div class="ev-h">🎟️ Happening nearby</div>${rows}</div>`;
+}
+
 function appendPlanCard(plan, dayLabel){
   const id = 'map'+(++mapSeq);
   const head = dayLabel ? `<div class="day-head">${esc(dayLabel)}</div>` : '';
@@ -229,9 +256,11 @@ function appendPlanCard(plan, dayLabel){
       <div class="map" id="${id}"></div>
       <div class="sum"><span>💸 <b>~$${plan.estimated_cost}</b> / ${plan.party_size}</span>
         <span>✨ <b>${esc(plan.vibe.replace('_',' '))}</b></span>
-        <span>📍 <b>${plan.stops.length}</b> stops</span></div>
+        <span>📍 <b>${plan.stops.length}</b> stops</span>
+        ${plan.weather?`<span>🌤️ <b>${esc(plan.weather)}</b></span>`:''}</div>
       <div class="stops">${plan.stops.map(stopHtml).join('')}</div>
-      ${plan.tip?`<div class="tip">💡 ${esc(plan.tip)}</div>`:''}</div>`;
+      ${plan.tip?`<div class="tip">💡 ${esc(plan.tip)}</div>`:''}
+      ${eventsHtml(plan.events)}</div>`;
   const wrap = document.createElement('div'); wrap.innerHTML = html;
   while (wrap.firstElementChild) thread.appendChild(wrap.firstElementChild);
   scrollDown(); setTimeout(()=>drawMap(id, plan), 60);

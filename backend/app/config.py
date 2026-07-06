@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     # Yelp Fusion (free tier: no card, ~500 calls/day). Blank → OSM only.
     yelp_api_key: str = ""
 
+    # Ticketmaster Discovery (free: concerts, sports, comedy). Use the Consumer Key.
+    ticketmaster_api_key: str = ""
+
     # Rate limiting (requests per window per client)
     rate_limit_requests: int = 120
     rate_limit_window_seconds: int = 60

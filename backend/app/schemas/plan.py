@@ -25,6 +25,20 @@ class Center(BaseModel):
     lng: float
 
 
+class Event(BaseModel):
+    name: str
+    venue: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+    date: str | None = None
+    time: str | None = None
+    category: str | None = None
+    url: str | None = None
+    price_min: float | None = None
+    price_max: float | None = None
+    image: str | None = None
+
+
 class Plan(BaseModel):
     vibe: str
     budget: float
@@ -34,8 +48,10 @@ class Plan(BaseModel):
     center: Center
     intro: str | None = None
     tip: str | None = None
+    weather: str | None = None
     walk_km: float | None = None
     stops: list[PlanStop]
+    events: list[Event] = Field(default_factory=list)
     day: int | None = None
 
 

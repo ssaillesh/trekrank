@@ -39,8 +39,10 @@ CATEGORIES = {
     "activities": {
         "label": "Things to do", "icon": "🎟️",
         "selectors": ['"tourism"="attraction"', '"tourism"="theme_park"', '"tourism"="gallery"',
-                      '"leisure"="park"', '"amenity"="cinema"', '"amenity"="theatre"',
-                      '"leisure"="bowling_alley"'],
+                      '"amenity"="cinema"', '"amenity"="theatre"', '"amenity"="nightclub"',
+                      '"leisure"="bowling_alley"', '"leisure"="escape_game"', '"leisure"="amusement_arcade"',
+                      '"leisure"="trampoline_park"', '"leisure"="miniature_golf"', '"leisure"="water_park"',
+                      '"sport"="laser_tag"', '"sport"="paintball"', '"sport"="karting"'],
     },
     "party": {
         "label": "Nightlife", "icon": "🎉",
@@ -122,11 +124,11 @@ def fetch_hotspots(category: str, *, city_key: str | None = None,
         if not city:
             return []
         lat, lng, radius = city["lat"], city["lng"], city["radius"]
-        cache_key = f"hotspots:v4:{city_key}:{category}"
+        cache_key = f"hotspots:v5:{city_key}:{category}"
     elif lat is not None and lng is not None:
         radius = max(500, min(radius, 8000))
         # Round coords to ~1km so nearby requests share a cache entry.
-        cache_key = f"hotspots:v4:{round(lat, 2)}:{round(lng, 2)}:{radius}:{category}"
+        cache_key = f"hotspots:v5:{round(lat, 2)}:{round(lng, 2)}:{radius}:{category}"
     else:
         return []
 
