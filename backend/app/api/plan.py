@@ -10,11 +10,26 @@ import re
 
 from fastapi import APIRouter
 
+from app.config import settings
 from app.schemas.plan import ChatRequest, ChatResponse, Plan
-from app.services import llm
+from app.services import llm, yelp
 from app.services.planner import build_plan, build_trip, VIBE_PLANS
 
 router = APIRouter(prefix="/plan", tags=["planner"])
+
+
+@router.get("/debug")
+def debug():
+    """Config health for the planner brain. Never returns the API keys."""
+    ok, detail = llm.ping()
+    return {
+        "llm_configured": llm.available(),
+        "llm_base_url": settings.llm_base_url,
+        "llm_model": settings.llm_model,
+        "llm_test_ok": ok,
+        "llm_test_detail": detail,
+        "yelp_configured": yelp.available(),
+    }
 
 VIBE_LABELS = {
     "chill": "Chill", "romantic": "Romantic", "adventurous": "Adventurous",

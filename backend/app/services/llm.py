@@ -15,6 +15,24 @@ def available() -> bool:
     return bool(settings.llm_api_key)
 
 
+def ping() -> tuple[bool, str]:
+    """Tiny live call to surface config/auth problems. Never returns the key."""
+    if not available():
+        return (False, "LLM_API_KEY is empty — no key loaded")
+    try:
+        r = httpx.post(
+            f"{settings.llm_base_url.rstrip('/')}/chat/completions",
+            json={"model": settings.llm_model,
+                  "messages": [{"role": "user", "content": "reply with: ok"}],
+                  "max_tokens": 5},
+            headers={"Authorization": f"Bearer {settings.llm_api_key}"}, timeout=20.0)
+        if r.status_code != 200:
+            return (False, f"HTTP {r.status_code}: {r.text[:220]}")
+        return (True, r.json()["choices"][0]["message"]["content"][:60])
+    except Exception as e:
+        return (False, f"{type(e).__name__}: {str(e)[:200]}")
+
+
 def chat(messages: list[dict], *, temperature: float = 0.7,
          max_tokens: int = 1200, want_json: bool = False) -> str | None:
     """Return the assistant's reply text, or None on any failure."""
@@ -26,10 +44,8 @@ def chat(messages: list[dict], *, temperature: float = 0.7,
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
-    if want_json:
-        # Supported by Groq; Gemini's OpenAI layer tolerates/ignores it. We also
-        # instruct JSON in the prompt and parse defensively, so this is a hint.
-        payload["response_format"] = {"type": "json_object"}
+    # NOTE: we intentionally do NOT send response_format — Gemini's OpenAI-compat
+    # layer can 400 on it. We instruct JSON in the prompt and parse defensively.
     try:
         resp = httpx.post(
             f"{settings.llm_base_url.rstrip('/')}/chat/completions",
