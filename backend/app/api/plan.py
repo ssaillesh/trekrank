@@ -13,6 +13,7 @@ from fastapi import APIRouter
 from app.config import settings
 from app.schemas.plan import ChatRequest, ChatResponse, Plan
 from app.services import llm, yelp
+from app.services.geocoding import geocode
 from app.services.planner import build_plan, build_trip, VIBE_PLANS
 
 router = APIRouter(prefix="/plan", tags=["planner"])
@@ -56,7 +57,8 @@ Your job: read the whole conversation and output ONLY JSON (no prose) with these
   transport: walk|transit|car or null
   group_type: date|friends|family|solo or null
   dietary: short string of food prefs/restrictions, or ""
-  interests: short string, or ""
+  location: a city/neighbourhood the user names to plan in (e.g. "Toronto", "Kensington Market"), or null
+  interests: short string of specific things they want (e.g. "aquarium, hookah, rec room"), or ""
   ready: true ONLY if budget AND vibe are known
   question: if not ready, ONE concise concierge-style question to get the missing essentials
   quick_replies: array of 2-5 short tappable answers for that question
@@ -68,6 +70,16 @@ set ready=true and leave the rest null. Ask at most what's essential, in one que
 
 def _joined_user_text(req):
     return " ".join(m.content for m in req.messages if m.role == "user").lower()
+
+
+def _orig_user_text(req):
+    return " ".join(m.content for m in req.messages if m.role == "user")
+
+
+def _extract_location(orig_text):
+    """Catch 'in/around/near <Capitalized Place>' when the LLM isn't available."""
+    m = re.search(r"\b(?:in|around|near|at)\s+([A-Z][\w.'-]+(?:\s+[A-Z][\w.'-]+){0,2})", orig_text)
+    return m.group(1).strip() if m else None
 
 
 def _extract_days(text):
@@ -151,12 +163,20 @@ def _needs(prefs):
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
-    if req.lat is None or req.lng is None:
-        return ChatResponse(type="message",
-            message="First, enable location so I can source spots near you. Then: your budget and the vibe.")
-
     text = _joined_user_text(req)
     prefs = (_llm_extract(req) if llm.available() else None) or _heuristic_extract(text)
+
+    # Where to plan: a city the user named wins over the device pin. This also
+    # lets people plan for a place they're not currently standing in.
+    lat, lng = req.lat, req.lng
+    loc_name = prefs.get("location") or _extract_location(_orig_user_text(req))
+    if loc_name:
+        coords = geocode(loc_name, None)
+        if coords:
+            lat, lng = coords
+    if lat is None or lng is None:
+        return ChatResponse(type="message",
+            message="Tell me where — enable location, or just name a city (e.g. \"in Toronto\") — plus your budget and vibe.")
 
     if not prefs.get("budget") and any(w in text for w in ["no limit", "no object", "unlimited"]):
         prefs["budget"] = 500
@@ -179,13 +199,13 @@ def chat(req: ChatRequest):
     budget = float(prefs["budget"])
 
     if days > 1:
-        trip = [Plan(**d) for d in build_trip(days=days, lat=req.lat, lng=req.lng, budget=budget, **opts) if d["stops"]]
+        trip = [Plan(**d) for d in build_trip(days=days, lat=lat, lng=lng, budget=budget, **opts) if d["stops"]]
         if not trip:
             return ChatResponse(type="message", message="I couldn't source enough for that trip nearby. A larger budget or different vibe?")
         title = f"Your {len(trip)}-day {opts.get('vibe','').replace('_',' ')} trip".strip()
         return ChatResponse(type="itinerary", message=f"{title} — arranged day by day.", days=trip, title=title)
 
-    plan_dict = build_plan(lat=req.lat, lng=req.lng, budget=budget, **opts)
+    plan_dict = build_plan(lat=lat, lng=lng, budget=budget, **opts)
     if not plan_dict["stops"]:
         return ChatResponse(type="message", message="I couldn't source enough open spots nearby for that. A larger budget or different vibe?")
     plan = Plan(**plan_dict)

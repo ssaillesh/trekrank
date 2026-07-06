@@ -12,30 +12,35 @@ from app.services import llm
 PRICE_COST = {"$": 15, "$$": 30, "$$$": 65, "$$$$": 110}
 PRICE_LEVEL = {"$": 1, "$$": 2, "$$$": 3, "$$$$": 4}
 
+# "activity" = real things to do (aquarium, arcade, escape room, museum, bowling…).
+# "leisure"  = evening vibes (lounge, hookah, cocktail/live-music, karaoke…).
+# Every plan is built as activity + food + leisure so it's never all restaurants.
 SLOT_SPECS = {
-    "cafe":    {"label": "Coffee & warm-up", "icon": "☕", "yelp": {"categories": "coffee,cafes"},                      "osm": "food",       "base": 8},
-    "scenic":  {"label": "Scenic start",     "icon": "🌇", "yelp": {"categories": "parks,landmarks", "term": "scenic view"}, "osm": "nature", "base": 0},
-    "activity":{"label": "Activity",         "icon": "🎟️", "yelp": {"categories": "active,arts", "term": "things to do"},    "osm": "activities", "base": 22},
-    "lunch":   {"label": "Lunch",            "icon": "🥗", "yelp": {"categories": "restaurants", "term": "lunch"},          "osm": "food",   "base": 18},
-    "dinner":  {"label": "Dinner",           "icon": "🍽️", "yelp": {"categories": "restaurants", "term": "dinner"},         "osm": "food",   "base": 30},
-    "drinks":  {"label": "Drinks",           "icon": "🍸", "yelp": {"categories": "bars,cocktailbars"},                    "osm": "party",  "base": 15},
-    "dessert": {"label": "Sweet finish",     "icon": "🍰", "yelp": {"categories": "desserts,icecream"},                    "osm": "food",   "base": 10},
+    "cafe":    {"label": "Coffee & warm-up", "icon": "☕", "yelp": {"categories": "coffee,cafes"}, "osm": "food", "base": 8},
+    "scenic":  {"label": "Scenic spot",      "icon": "🌇", "yelp": {"categories": "parks,landmarks", "term": "scenic view"}, "osm": "nature", "base": 0},
+    "activity":{"label": "Activity",         "icon": "🎡", "yelp": {"categories": "aquariums,zoos,museums,galleries,arcades,escapegames,amusementparks,bowling,active,arts", "term": "things to do"}, "osm": "activities", "base": 28},
+    "lunch":   {"label": "Lunch",            "icon": "🥗", "yelp": {"categories": "restaurants", "term": "lunch"}, "osm": "food", "base": 18},
+    "dinner":  {"label": "Dinner",           "icon": "🍽️", "yelp": {"categories": "restaurants", "term": "dinner"}, "osm": "food", "base": 30},
+    "leisure": {"label": "Vibes & drinks",   "icon": "🎶", "yelp": {"categories": "lounges,hookah_bars,cocktailbars,karaoke,comedyclubs,musicvenues,bars"}, "osm": "party", "base": 18},
+    "drinks":  {"label": "Drinks",           "icon": "🍸", "yelp": {"categories": "bars,cocktailbars"}, "osm": "party", "base": 15},
+    "dessert": {"label": "Sweet finish",     "icon": "🍰", "yelp": {"categories": "desserts,icecream"}, "osm": "food", "base": 10},
 }
 
+# Each vibe = activity + a meal + a leisure/finish. Price band scales with vibe.
 VIBE_PLANS = {
-    "chill":       {"price": "1,2",   "slots": ["cafe", "dinner", "dessert"]},
-    "romantic":    {"price": "2,3",   "slots": ["scenic", "dinner", "dessert"]},
-    "adventurous": {"price": "1,2,3", "slots": ["activity", "dinner", "drinks"]},
-    "extravagant": {"price": "3,4",   "slots": ["activity", "dinner", "drinks"]},
-    "night_out":   {"price": "2,3",   "slots": ["dinner", "drinks", "activity"]},
+    "chill":       {"price": "1,2",   "slots": ["activity", "dinner", "dessert"]},
+    "romantic":    {"price": "2,3",   "slots": ["activity", "dinner", "leisure"]},
+    "adventurous": {"price": "1,2,3", "slots": ["activity", "dinner", "leisure"]},
+    "extravagant": {"price": "3,4",   "slots": ["activity", "dinner", "leisure"]},
+    "night_out":   {"price": "2,3",   "slots": ["activity", "dinner", "leisure"]},
 }
 DEFAULT_VIBE = "romantic"
 
 # Time of day overrides the slot template (evening falls through to the vibe).
 TIME_PLANS = {
     "morning":   ["cafe", "activity", "lunch"],
-    "afternoon": ["activity", "lunch", "cafe"],
-    "night":     ["dinner", "drinks", "dessert"],
+    "afternoon": ["activity", "lunch", "leisure"],
+    "night":     ["activity", "dinner", "leisure"],
 }
 
 # Transport shapes how far stops can be and how hard we penalise distance so the
@@ -61,11 +66,13 @@ def _est_cost(cand, slot):
     return PRICE_COST.get(cand.get("price"), slot["base"])
 
 
-def _gather(anchor, slot_key, price_pref, radius, dietary):
+def _gather(anchor, slot_key, price_pref, radius, dietary, term_override=None):
     slot = SLOT_SPECS[slot_key]
     term = slot["yelp"].get("term")
     if dietary and slot_key in ("lunch", "dinner"):
         term = f"{dietary} {term or ''}".strip()
+    if term_override:                       # e.g. "aquarium" for the activity slot
+        term = term_override
     cands = yelp.search(anchor[0], anchor[1], term=term,
                         categories=slot["yelp"].get("categories"),
                         price=price_pref, radius=radius, limit=15, sort_by="rating")
@@ -116,20 +123,22 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
     used = set(exclude or ())
     slots = _slots_for(vibe, time_of_day, group_type)
 
-    # Make the middle stop the hidden gem (usually the activity/dessert).
-    gem_index = 1 if len(slots) >= 2 else 0
+    # Surface the hidden gem on the activity if there is one, else the last stop.
+    gem_index = slots.index("activity") if "activity" in slots else len(slots) - 1
 
     anchor = (lat, lng)      # each pick pulls the next search toward the last stop
     stops = []
     for i, slot_key in enumerate(slots):
         slot = SLOT_SPECS[slot_key]
+        # bias the activity search toward whatever the guest specifically asked for
+        term_override = interests if (slot_key == "activity" and interests) else None
         # tighter search radius around the running anchor keeps stops together;
         # if nothing decent is that close, widen to the full radius before skipping.
         r = tconf["cluster"] if i > 0 else radius
-        cands = _gather(anchor, slot_key, price_pref, r, dietary)
+        cands = _gather(anchor, slot_key, price_pref, r, dietary, term_override)
         pick = _pick(cands, used, anchor, tconf["penalty"], want_gem=(i == gem_index))
         if not pick and r < radius:
-            cands = _gather(anchor, slot_key, price_pref, radius, dietary)
+            cands = _gather(anchor, slot_key, price_pref, radius, dietary, term_override)
             pick = _pick(cands, used, anchor, tconf["penalty"], want_gem=(i == gem_index))
         if not pick:
             continue
@@ -147,11 +156,15 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
     def total():
         return sum(s["est_cost"] for s in stops) * max(1, party_size)
 
-    while stops and total() > budget and len(stops) > 2:
+    # Only trim on a real overage (estimates are rough), and drop the least
+    # essential first — a dessert/drink before ever cutting the activity, so the
+    # plan keeps its activity + food + leisure shape.
+    DROP_ORDER = {"dessert": 0, "cafe": 1, "drinks": 1, "leisure": 1, "scenic": 2, "activity": 3}
+    while stops and total() > budget * 1.15 and len(stops) > 2:
         droppable = [s for s in stops if s["slot"] not in ("dinner", "lunch")]
         if not droppable:
             break
-        stops.remove(max(droppable, key=lambda s: s["est_cost"]))
+        stops.remove(min(droppable, key=lambda s: DROP_ORDER.get(s["slot"], 5)))
 
     # how spread out the plan ended up (for the UI / narration)
     spread = 0.0
