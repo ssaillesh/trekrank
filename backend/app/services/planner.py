@@ -42,20 +42,25 @@ VIBE_PLANS = {
 }
 DEFAULT_VIBE = "romantic"
 
-# Time of day overrides the slot template (evening falls through to the vibe).
-TIME_PLANS = {
-    "morning":   ["cafe", "activity", "lunch"],
-    "afternoon": ["activity", "lunch", "leisure"],
-    "night":     ["activity", "dinner", "leisure"],
+# A "day arc" ordered morning→night. We take the first N depending on how much of
+# the day the guest wants filled — so a full day is many stops, an evening is few.
+# Repeated slot types (e.g. two activities) resolve to different venues.
+ARCS = {
+    "morning":   ["cafe", "activity", "lunch", "activity", "dinner", "leisure", "dessert"],
+    "afternoon": ["activity", "lunch", "activity", "dinner", "leisure", "dessert"],
+    "evening":   ["activity", "dinner", "leisure", "dessert", "activity"],
+    "night":     ["dinner", "activity", "leisure", "dessert"],
 }
 
-# Transport shapes how far stops can be and how hard we penalise distance so the
-# plan stays walkable/tight unless you've got a car.
+# Transport shapes the search. Only "walk" chains stops tightly together (a
+# walkable route); everything else searches the whole central-city radius from the
+# centre, so you get the best spots across town — but bounded so it stays inside
+# the city (~7km of downtown = central Toronto, not Scarborough/Mississauga).
 TRANSPORT = {
-    "walk":    {"radius": 1500, "penalty": 1.6, "cluster": 900},
-    "transit": {"radius": 4500, "penalty": 0.6, "cluster": 2500},
-    "car":     {"radius": 9000, "penalty": 0.25, "cluster": 6000},
-    "any":     {"radius": 4000, "penalty": 0.8, "cluster": 2200},
+    "walk":    {"radius": 1600, "penalty": 1.5, "cluster": 1000, "chain": True},
+    "transit": {"radius": 7000, "penalty": 0.35, "chain": False},
+    "car":     {"radius": 9000, "penalty": 0.2,  "chain": False},
+    "any":     {"radius": 7000, "penalty": 0.35, "chain": False},
 }
 
 
@@ -153,23 +158,25 @@ def _pick(cands, used, anchor, penalty, want_gem, vary=False):
     return ranked[0]
 
 
-def _slots_for(vibe, time_of_day, group_type):
-    slots = list(TIME_PLANS.get(time_of_day) or VIBE_PLANS[vibe]["slots"])
-    # No bars for family / kids or if they've asked to stay sober.
+def _slots_for(vibe, time_of_day, group_type, length):
+    eff = time_of_day or ("night" if vibe == "night_out" else "evening")
+    arc = ARCS.get(eff, ARCS["evening"])
+    slots = arc[:max(2, min(length, len(arc)))]
+    # No bars for family / kids — swap drinks/leisure for dessert.
     if group_type in ("family", "kids"):
-        slots = ["dessert" if s == "drinks" else s for s in slots]
+        slots = ["dessert" if s in ("drinks", "leisure") else s for s in slots]
     return slots
 
 
 def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="any",
                time_of_day=None, group_type=None, dietary="", interests="",
-               radius=None, exclude=None, vary=False):
+               radius=None, exclude=None, vary=False, target_stops=4):
     vibe = vibe if vibe in VIBE_PLANS else DEFAULT_VIBE
     price_pref = VIBE_PLANS[vibe]["price"]
     tconf = TRANSPORT.get(transport, TRANSPORT["any"])
     radius = radius or tconf["radius"]
     used = set(exclude or ())
-    slots = _slots_for(vibe, time_of_day, group_type)
+    slots = _slots_for(vibe, time_of_day, group_type, target_stops)
 
     # Weather-aware: on a wet/cold day, keep it indoors — swap the outdoor scenic
     # stop for a cosy cafe and force indoor activities.
@@ -181,7 +188,9 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
     # Surface the hidden gem on the activity if there is one, else the last stop.
     gem_index = slots.index("activity") if "activity" in slots else len(slots) - 1
 
-    anchor = (lat, lng)      # each pick pulls the next search toward the last stop
+    center = (lat, lng)
+    chain = tconf.get("chain", False)   # only walking chains stops tightly together
+    anchor = center
     stops = []
     for i, slot_key in enumerate(slots):
         slot = SLOT_SPECS[slot_key]
@@ -194,18 +203,25 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
                 term_override = interests          # e.g. "escape room"
         elif slot_key in ("dinner", "lunch") and cz:
             term_override = cz                     # e.g. "korean bbq"
-        # tighter search radius around the running anchor keeps stops together;
-        # if nothing decent is that close, widen to the full radius before skipping.
-        r = tconf["cluster"] if i > 0 else radius
-        cands = _gather(anchor, slot_key, price_pref, r, dietary, term_override, cat_override)
-        pick = _pick(cands, used, anchor, tconf["penalty"], (i == gem_index), vary)
+        # Walk mode: chain each stop near the last for a tight walkable route.
+        # City mode: search the whole central-city radius from the centre, so you
+        # get the best spots across town (still bounded to the city by `radius`).
+        if chain:
+            search_from = anchor
+            r = tconf["cluster"] if i > 0 else radius
+        else:
+            search_from = center
+            r = radius
+        cands = _gather(search_from, slot_key, price_pref, r, dietary, term_override, cat_override)
+        pick = _pick(cands, used, search_from, tconf["penalty"], (i == gem_index), vary)
         if not pick and r < radius:
-            cands = _gather(anchor, slot_key, price_pref, radius, dietary, term_override, cat_override)
-            pick = _pick(cands, used, anchor, tconf["penalty"], (i == gem_index), vary)
+            cands = _gather(search_from, slot_key, price_pref, radius, dietary, term_override, cat_override)
+            pick = _pick(cands, used, search_from, tconf["penalty"], (i == gem_index), vary)
         if not pick:
             continue
         used.add(pick["name"].lower())
-        anchor = (pick["lat"], pick["lng"])
+        if chain:
+            anchor = (pick["lat"], pick["lng"])
         stops.append({
             "slot": slot_key, "label": slot["label"], "icon": slot["icon"],
             "name": pick["name"], "lat": pick["lat"], "lng": pick["lng"],
@@ -306,7 +322,7 @@ def _narrate(plan, interests, group_type, time_of_day, dietary, wx=None, events=
             {"role": "user", "content":
              f"Vibe: {plan['vibe']}. Budget: ${plan['budget']} for {plan['party_size']}. "
              f"Start around {start}. Context — {ctx or 'none given'}. "
-             f"All stops are within ~{plan['walk_km']}km of each other.\nVENUES:\n{listing}"
+             f"Stops span ~{plan['walk_km']}km total, all within the city.\nVENUES:\n{listing}"
              + (f"\n{ev_line}" if ev_line else "")},
         ]
         data = llm.chat_json(msg)
@@ -331,6 +347,5 @@ def _narrate(plan, interests, group_type, time_of_day, dietary, wx=None, events=
 
 def _template_intro(plan):
     n = len(plan["stops"])
-    close = f" all within ~{plan['walk_km']}km" if plan.get("walk_km") else ""
-    return (f"A {plan['vibe']} plan — {n} stop{'s' if n != 1 else ''}{close}, "
+    return (f"A {plan['vibe']} plan — {n} stop{'s' if n != 1 else ''}, "
             f"about ${plan['estimated_cost']} for {plan['party_size']}.")

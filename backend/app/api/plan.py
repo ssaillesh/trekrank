@@ -83,6 +83,15 @@ def _extract_location(orig_text):
     return m.group(1).strip() if m else None
 
 
+def _target_stops(text, time_of_day):
+    """How many stops to fill — a whole day is more; an evening is fewer."""
+    if any(k in text for k in ["full day", "all day", "whole day", "entire day", "day trip",
+                                "fill the day", "more the merrier", "packed", "jam pack",
+                                "jam-pack", "as much as", "maximize", "lots to do", "the whole thing"]):
+        return 6
+    return {"morning": 5, "afternoon": 5, "night": 4}.get(time_of_day, 4)
+
+
 def _extract_days(text):
     if "weekend" in text:
         return 2
@@ -200,6 +209,10 @@ def chat(req: ChatRequest):
         prefs["vibe"] = prefs.get("vibe") or random.choice(list(VIBE_PLANS))
     if not prefs.get("days"):
         prefs["days"] = _extract_days(text)
+    # A "full day / day trip" starts in the morning so it fills breakfast → night.
+    if not prefs.get("time_of_day") and any(k in text for k in
+            ["full day", "all day", "whole day", "entire day", "day trip", "the whole thing"]):
+        prefs["time_of_day"] = "morning"
 
     missing = _needs(prefs)
     if missing:
@@ -217,6 +230,8 @@ def chat(req: ChatRequest):
     last = req.messages[-1].content.lower() if req.messages else ""
     opts["vary"] = any(w in last for w in ["another", "different", "something else",
                                             "try again", "switch", "change it", "new plan", "not this"])
+    # How full to make the day (whole day → more stops; evening → fewer).
+    opts["target_stops"] = _target_stops(text, opts.get("time_of_day"))
 
     if days > 1:
         trip = [Plan(**d) for d in build_trip(days=days, lat=lat, lng=lng, budget=budget, **opts) if d["stops"]]
