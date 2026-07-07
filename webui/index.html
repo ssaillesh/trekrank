@@ -3,975 +3,241 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>TrekRank — Travel. Verified. The social network for explorers.</title>
-<meta name="description" content="TrekRank turns real-world exploration into verified miles, ranks, badges and reputation. Strava for travel. Join early access." />
-<meta name="theme-color" content="#070b18" />
+<title>Roamly — your night, planned</title>
+<meta name="description" content="Tell Roamly your budget and your vibe — get a real itinerary of places near you, from dinner to drinks to the dessert you didn't know you needed." />
+<meta name="theme-color" content="#fdf5ec" />
 
 <!-- Open Graph -->
-<meta property="og:title" content="TrekRank — Travel. Verified." />
-<meta property="og:description" content="The social network for explorers. Track real adventures, earn verified miles, climb the ranks." />
+<meta property="og:title" content="Roamly — your night, planned" />
+<meta property="og:description" content="Budget + vibe in, a real night out — real places, real hours, mapped stop by stop." />
 <meta property="og:type" content="website" />
 
-<link rel="preconnect" href="https://unpkg.com" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/config.js"></script>
 
 <style>
   :root{
-    --accent:#5eebd4; --accent2:#738cff;
-    --bg0:#070b18; --bg1:#0b1124; --bg2:#101a36;
-    --card:rgba(255,255,255,.045); --card-brd:rgba(255,255,255,.09);
-    --text:#eef4ff; --muted:#9bb0d4; --muted2:#6c7fa5;
-    --gold:#ffd166; --rose:#ff7a9c;
-    --maxw:1180px; --r:22px;
-    --shadow:0 30px 80px rgba(0,0,0,.55);
+    --accent:#ff5a5f; --accent2:#7c5cff; --lime:#b8f34a; --hot:#ff3d9a;
+    --bg0:#fdf5ec; --bg1:#ffffff; --bg2:#f1ebff;
+    --card:#ffffff; --brd:rgba(36,22,51,.10); --hair:rgba(36,22,51,.07);
+    --text:#241633; --muted:#6f6382; --muted2:#a99fb8;
+    --shadow:0 20px 45px -16px rgba(124,92,255,.35);
+    --maxw:1080px; --r:22px;
+    --ease:cubic-bezier(.22,1,.36,1);
+    --pop:cubic-bezier(.34,1.56,.64,1);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html{scroll-behavior:smooth;}
   body{
-    margin:0; background:var(--bg0); color:var(--text); overflow-x:hidden;
-    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",Roboto,Inter,sans-serif;
-    -webkit-font-smoothing:antialiased; line-height:1.45;
+    margin:0; color:var(--text); overflow-x:hidden; line-height:1.5;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Rounded","Segoe UI",Inter,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    background:
+      radial-gradient(720px 480px at 88% -6%, rgba(124,92,255,.18), transparent 62%),
+      radial-gradient(680px 520px at 6% 8%, rgba(255,90,95,.16), transparent 58%),
+      radial-gradient(700px 600px at 50% 116%, rgba(184,243,74,.20), transparent 60%),
+      var(--bg0);
   }
   a{color:inherit; text-decoration:none;}
-  img{max-width:100%;}
-  ::selection{background:var(--accent); color:#062018;}
+  ::selection{background:var(--accent2); color:#fff;}
   .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px;}
-  section{position:relative;}
+  .grad{background:linear-gradient(110deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent;}
 
-  /* ---------- type ---------- */
-  h1,h2,h3{margin:0; letter-spacing:-.03em; font-weight:800; line-height:1.04;}
-  .eyebrow{font-size:13px; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
-    color:var(--accent); margin-bottom:18px;}
-  .display{font-size:clamp(44px,8.5vw,104px); font-weight:850;}
-  .h2{font-size:clamp(32px,5vw,60px);}
-  .lead{font-size:clamp(17px,2.1vw,22px); color:var(--muted); font-weight:400; max-width:640px;}
-  .grad{background:linear-gradient(110deg,var(--accent),var(--accent2)); -webkit-background-clip:text;
-    background-clip:text; color:transparent;}
+  header{position:sticky; top:0; z-index:20; backdrop-filter:blur(14px);
+    background:rgba(253,245,236,.8); border-bottom:1px solid var(--hair);}
+  .nav{display:flex; align-items:center; gap:18px; padding:14px 24px; max-width:var(--maxw); margin:0 auto;}
+  .logo{font-weight:850; letter-spacing:-.02em; font-size:21px;}
+  .logo .m{margin-right:6px;}
+  .nav .links{margin-left:auto; display:flex; align-items:center; gap:16px; font-size:14px; font-weight:650; color:var(--muted);}
+  .nav .links a:hover{color:var(--accent);}
 
-  /* ---------- buttons ---------- */
-  .btn{display:inline-flex; align-items:center; gap:9px; font-size:16px; font-weight:700;
-    padding:15px 28px; border-radius:999px; border:1px solid transparent; cursor:pointer;
-    transition:transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s, background .25s; will-change:transform;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    font-weight:750; font-size:15px; padding:12px 22px; border-radius:999px;
+    border:1px solid var(--brd); background:var(--card); color:var(--text);
+    cursor:pointer; transition:.2s var(--pop);}
   .btn:hover{transform:translateY(-2px);}
-  .btn-primary{background:linear-gradient(180deg,var(--accent),#39c9b3); color:#04211b;
-    box-shadow:0 12px 34px rgba(94,235,212,.35);}
-  .btn-primary:hover{box-shadow:0 18px 46px rgba(94,235,212,.5);}
-  .btn-ghost{background:rgba(255,255,255,.06); color:var(--text); border-color:var(--card-brd);
-    backdrop-filter:blur(8px);}
-  .btn-ghost:hover{background:rgba(255,255,255,.11);}
+  .btn-primary{background:linear-gradient(110deg,var(--accent),var(--accent2)); color:#fff; border:none; box-shadow:var(--shadow);}
+  .btn-lime{background:var(--lime); color:#241633; border:none;}
 
-  /* ---------- nav ---------- */
-  header.nav{position:fixed; top:0; left:0; right:0; z-index:100;
-    transition:background .3s, backdrop-filter .3s, border-color .3s; border-bottom:1px solid transparent;}
-  header.nav.scrolled{background:rgba(7,11,24,.72); backdrop-filter:blur(16px) saturate(140%);
-    border-bottom-color:var(--card-brd);}
-  .nav-inner{display:flex; align-items:center; justify-content:space-between; height:64px;}
-  .logo{display:inline-flex; align-items:center; font-weight:850; font-size:20px; letter-spacing:-.02em;}
-  .logo .dot{color:var(--accent);}
-  .logo .mark{width:30px; height:30px; border-radius:9px;
-    background:conic-gradient(from 200deg,var(--accent),var(--accent2),var(--accent));
-    display:grid; place-items:center; font-size:16px; box-shadow:0 6px 18px rgba(94,235,212,.4);}
-  .nav-links{display:flex; gap:30px; font-size:14px; color:var(--muted); font-weight:600;}
-  .nav-links a:hover{color:var(--text);}
-  .nav .btn{padding:10px 20px; font-size:14px;}
-  @media(max-width:820px){.nav-links{display:none;}}
+  /* hero */
+  .hero{padding:84px 0 56px; text-align:center;}
+  .eyebrow{display:inline-block; font-size:12.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--accent2); background:var(--bg2); border:1px solid var(--brd); padding:7px 14px; border-radius:999px; margin-bottom:22px;}
+  h1{font-size:clamp(40px,7vw,72px); line-height:1.04; letter-spacing:-.03em; margin:0 0 18px; font-weight:850;}
+  .lead{font-size:clamp(16px,2.2vw,20px); color:var(--muted); max-width:620px; margin:0 auto 32px;}
+  .cta-row{display:flex; gap:14px; justify-content:center; flex-wrap:wrap;}
 
-  /* ---------- reveal ---------- */
-  .reveal{opacity:0; transform:translateY(34px); transition:opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1);}
-  .reveal.in{opacity:1; transform:none;}
-  .reveal.d1{transition-delay:.08s;} .reveal.d2{transition-delay:.16s;}
-  .reveal.d3{transition-delay:.24s;} .reveal.d4{transition-delay:.32s;}
-  @media(prefers-reduced-motion:reduce){.reveal{opacity:1; transform:none; transition:none;}}
+  /* fake chat preview */
+  .preview{max-width:560px; margin:56px auto 0; background:var(--card); border:1px solid var(--brd);
+    border-radius:var(--r); box-shadow:var(--shadow); padding:22px; text-align:left;
+    animation:rise .6s var(--ease) both;}
+  @keyframes rise{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;}}
+  .msg{display:flex; gap:10px; margin-bottom:12px;}
+  .av{width:30px; height:30px; border-radius:50%; flex:0 0 auto; display:grid; place-items:center; font-size:15px; color:#fff; font-weight:800;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));}
+  .bubble{padding:11px 14px; border-radius:16px; font-size:14.5px; background:var(--bg2); border:1px solid var(--brd); border-top-left-radius:5px;}
+  .msg.me{flex-direction:row-reverse;}
+  .msg.me .av{background:linear-gradient(135deg,var(--accent2),var(--hot));}
+  .msg.me .bubble{background:linear-gradient(180deg,var(--accent),var(--accent2)); color:#fff; font-weight:600; border-radius:16px; border-top-right-radius:5px; border:none;}
+  .stops{margin-top:6px; border-top:1px dashed var(--brd); padding-top:12px;}
+  .stop{display:flex; align-items:baseline; gap:10px; padding:7px 2px; font-size:14px;}
+  .stop .time{font-size:11px; font-weight:800; color:#fff; background:var(--accent); padding:2px 8px; border-radius:999px;}
+  .stop .name{font-weight:700;}
+  .stop .cat{color:var(--muted2); font-size:12.5px;}
 
-  /* ---------- HERO ---------- */
-  .hero{min-height:100svh; display:flex; align-items:center; padding:120px 0 80px; overflow:hidden;}
-  .hero-bg{position:absolute; inset:0; z-index:0; pointer-events:none;}
-  .glow{position:absolute; border-radius:50%; filter:blur(90px); opacity:.5;}
-  .glow.a{width:560px; height:560px; background:radial-gradient(circle,var(--accent),transparent 70%);
-    top:-120px; right:-100px; opacity:.32;}
-  .glow.b{width:620px; height:620px; background:radial-gradient(circle,var(--accent2),transparent 70%);
-    bottom:-220px; left:-160px; opacity:.32;}
-  .hero-grid{position:absolute; inset:0; opacity:.4;
-    background-image:radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px);
-    background-size:38px 38px; mask-image:radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 75%);
-    -webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 75%);}
-  .hero-inner{position:relative; z-index:2; width:100%;}
-  .hero h1{margin-bottom:24px;}
-  .hero .lead{margin-bottom:34px;}
-  .cta-row{display:flex; gap:14px; flex-wrap:wrap; align-items:center;}
-  .badge-line{display:flex; gap:22px; flex-wrap:wrap; margin-top:40px; color:var(--muted2);
-    font-size:13px; font-weight:600;}
-  .badge-line b{color:var(--text);}
-  /* flight routes svg */
-  .routes{position:absolute; inset:0; z-index:1; width:100%; height:100%;}
-  .routes path{fill:none; stroke:url(#rg); stroke-width:1.6; opacity:.55;
-    stroke-dasharray:8 10; animation:dash 16s linear infinite;}
-  .routes .node{fill:var(--accent); opacity:.9;}
-  @keyframes dash{to{stroke-dashoffset:-360;}}
+  /* sections */
+  section{padding:72px 0;}
+  h2{font-size:clamp(28px,4.4vw,42px); letter-spacing:-.02em; line-height:1.1; margin:0 0 12px; font-weight:850; text-align:center;}
+  .sub{color:var(--muted); text-align:center; max-width:560px; margin:0 auto 44px; font-size:16.5px;}
 
-  /* ---------- generic section ---------- */
-  .sec{padding:120px 0;}
-  .sec-head{max-width:720px; margin-bottom:60px;}
-  .sec-head .lead{margin-top:18px;}
-  .center{text-align:center; margin-left:auto; margin-right:auto;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+  @media(max-width:820px){.grid3{grid-template-columns:1fr;}}
+  .card{background:var(--card); border:1px solid var(--brd); border-radius:var(--r); padding:26px; transition:.25s var(--pop);}
+  .card:hover{transform:translateY(-4px); box-shadow:var(--shadow);}
+  .card .ico{font-size:30px; margin-bottom:12px;}
+  .card h3{margin:0 0 8px; font-size:18px; letter-spacing:-.01em;}
+  .card p{margin:0; color:var(--muted); font-size:14.5px;}
+  .card .num{display:inline-grid; place-items:center; width:30px; height:30px; border-radius:50%;
+    background:var(--bg2); border:1px solid var(--brd); font-weight:800; font-size:14px; color:var(--accent2); margin-bottom:12px;}
 
-  /* ---------- problem / compare ---------- */
-  .vs{display:grid; grid-template-columns:1fr auto 1fr; gap:24px; align-items:stretch;}
-  @media(max-width:760px){.vs{grid-template-columns:1fr;}}
-  .panel{background:var(--card); border:1px solid var(--card-brd); border-radius:var(--r); padding:32px;}
-  .panel.dim{opacity:.72;}
-  .panel h3{font-size:22px; margin-bottom:6px;}
-  .panel .tag{font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted2);}
-  .panel ul{list-style:none; margin:20px 0 0; padding:0; display:flex; flex-direction:column; gap:12px;}
-  .panel li{display:flex; align-items:center; gap:11px; font-size:16px; color:var(--muted);}
-  .panel li .ic{width:22px; height:22px; flex:none; border-radius:7px; display:grid; place-items:center; font-size:12px;}
-  .panel.win{border-color:rgba(94,235,212,.45); background:linear-gradient(180deg,rgba(94,235,212,.08),rgba(115,140,255,.04));}
-  .panel.win li{color:var(--text); font-weight:600;}
-  .panel.win .ic{background:rgba(94,235,212,.2); color:var(--accent);}
-  .panel.dim .ic{background:rgba(255,255,255,.08); color:var(--muted2);}
-  .vs-mid{display:grid; place-items:center;}
-  .vs-mid span{width:54px; height:54px; border-radius:50%; display:grid; place-items:center; font-weight:800;
-    background:var(--bg2); border:1px solid var(--card-brd); color:var(--muted);}
+  /* explore band */
+  .band{background:var(--card); border:1px solid var(--brd); border-radius:var(--r); box-shadow:var(--shadow);
+    padding:44px 36px; display:flex; align-items:center; gap:28px; flex-wrap:wrap;}
+  .band h2{text-align:left; margin:0 0 8px; font-size:clamp(24px,3.4vw,32px);}
+  .band p{margin:0; color:var(--muted);}
+  .band .txt{flex:1 1 320px;}
 
-  /* ---------- live map ---------- */
-  .map-card{position:relative; border-radius:26px; overflow:hidden; border:1px solid var(--card-brd);
-    box-shadow:var(--shadow); background:var(--bg1);}
-  #map{height:440px; width:100%; background:#0a1020;}
-  .map-overlay{position:absolute; z-index:500; left:20px; top:20px; right:20px; display:flex;
-    justify-content:space-between; gap:12px; pointer-events:none; flex-wrap:wrap;}
-  .chip{background:rgba(7,11,24,.78); backdrop-filter:blur(10px); border:1px solid var(--card-brd);
-    border-radius:14px; padding:12px 16px; pointer-events:auto;}
-  .chip .k{font-size:11px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:700;}
-  .chip .v{font-size:20px; font-weight:800;}
-  .verified-tag{display:inline-flex; align-items:center; gap:6px; color:var(--accent); font-weight:700; font-size:13px; margin-top:4px;}
-  .steps{display:flex; gap:14px; flex-wrap:wrap; margin-top:34px;}
-  .step{flex:1; min-width:150px; background:var(--card); border:1px solid var(--card-brd); border-radius:16px; padding:18px;}
-  .step .n{font-size:12px; color:var(--accent); font-weight:800; letter-spacing:.1em;}
-  .step h4{margin:8px 0 4px; font-size:17px;}
-  .step p{margin:0; font-size:14px; color:var(--muted);}
+  /* waitlist */
+  .wl-box{max-width:520px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+  .wl-box input{flex:1 1 260px; font:inherit; font-size:15px; padding:13px 18px; border-radius:999px;
+    border:1px solid var(--brd); background:var(--card); color:var(--text); outline:none;}
+  .wl-box input:focus{border-color:var(--accent2);}
+  .wl-note{text-align:center; color:var(--muted2); font-size:13px; margin-top:14px; min-height:18px;}
 
-  /* ---------- ranks (sticky) ---------- */
-  .rank-stage{position:relative;}
-  .rank-sticky{position:sticky; top:0; height:100svh; display:flex; align-items:center; overflow:hidden;}
-  .rank-grid{display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center; width:100%;}
-  @media(max-width:860px){.rank-grid{grid-template-columns:1fr; gap:24px;}}
-  .rank-ladder{display:flex; flex-direction:column; gap:8px;}
-  .rank-item{display:flex; align-items:center; gap:16px; padding:13px 16px; border-radius:16px;
-    border:1px solid var(--card-brd); background:var(--card); transition:.45s; opacity:.42;}
-  .rank-item.on{opacity:1; background:linear-gradient(90deg,rgba(94,235,212,.14),rgba(115,140,255,.06));
-    border-color:rgba(94,235,212,.5); transform:translateX(6px);}
-  .rank-item .coin3d{margin:0; flex:none; transition:transform .45s;}
-  .rank-item.on .coin3d{transform:scale(1.12);}
-  .rank-item .nm{font-weight:800; font-size:17px;}
-  .rank-item .desc{font-size:12.5px; color:var(--muted2); font-weight:600; line-height:1.25; margin-top:2px;}
-  .coin3d.static .coin{pointer-events:none; cursor:default;}
-  .rank-badge{display:flex; flex-direction:column; align-items:center; gap:20px; position:relative;}
-  .rank-badge::before{content:""; position:absolute; width:min(360px,76vw); aspect-ratio:1; top:-6%;
-    border-radius:50%; background:radial-gradient(circle at 40% 35%,rgba(94,235,212,.3),rgba(115,140,255,.12) 55%,transparent 72%);
-    filter:blur(8px); z-index:0;}
-  .rank-coin-wrap{position:relative; z-index:1;}
-  .rank-coin-label{font-weight:850; font-size:24px; letter-spacing:-.02em; z-index:1;}
-  .rank-coin-hint{font-size:12px; color:var(--muted2); font-weight:600; margin-top:-12px; z-index:1;}
-
-  /* ---------- badges ---------- */
-  .badge-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:16px;}
-  .bcard{position:relative; border-radius:18px; padding:22px 16px; text-align:center; cursor:default; overflow:hidden;
-    background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
-    border:1px solid var(--card-brd); transition:transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s, border-color .35s;}
-  .bcard:hover{transform:translateY(-6px); border-color:rgba(94,235,212,.5);
-    box-shadow:0 22px 50px rgba(94,235,212,.18);}
-  .bcard .em{font-size:42px; filter:drop-shadow(0 6px 16px rgba(0,0,0,.5)); display:block; margin-bottom:10px;}
-  .medal{width:66px; height:66px; display:block; margin:0 auto 12px; filter:drop-shadow(0 8px 18px rgba(0,0,0,.45));
-    transition:transform .35s cubic-bezier(.2,.8,.2,1);}
-  .bcard:hover .medal{transform:rotate(-5deg) scale(1.07);}
-  .pass-medal .medal{width:78px; height:78px;}
-  .bcard .nm{font-weight:800; font-size:15px;}
-  .bcard .ds{font-size:12px; color:var(--muted2); margin-top:4px;}
-  .bcard .req{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
-    color:var(--brand,#5eebd4); opacity:.78; margin-top:8px;}
-  .bcard .shine{position:absolute; inset:0; border-radius:18px; pointer-events:none;
-    background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.13) 50%,transparent 60%);
-    opacity:0; transition:opacity .4s;}
-  .bcard:hover .shine{opacity:1;}
-  .more-pill{display:inline-block; padding:13px 26px; border-radius:999px; font-weight:700; font-size:15px;
-    color:var(--accent); border:1px solid rgba(94,235,212,.4); background:rgba(94,235,212,.08);
-    transition:background .25s, transform .25s;}
-  .more-pill:hover{background:rgba(94,235,212,.16); transform:translatey(-2px);}
-
-  /* ---------- true 3D metallic coins (grab & spin) ---------- */
-  .coin3d{width:var(--cs,108px); height:var(--cs,108px); margin:0 auto 12px; perspective:680px;
-    filter:drop-shadow(0 calc(var(--cs,108px)*.08) calc(var(--cs,108px)*.06) rgba(0,0,0,.5));}
-  .coin{position:relative; width:100%; height:100%; transform-style:preserve-3d; cursor:grab;
-    touch-action:none; will-change:transform; transform:rotateX(10deg) rotateY(-14deg);
-    transition:transform .6s cubic-bezier(.4,.05,.2,1);}
-  .coin.spin{transition:none; cursor:grabbing;}
-  /* metal faces, masked to the symbol silhouette, pushed to the front/back of the solid */
-  .coin-face{position:absolute; inset:0; background:var(--metal);
-    -webkit-mask:var(--mask) center/86% no-repeat; mask:var(--mask) center/86% no-repeat;
-    -webkit-backface-visibility:hidden; backface-visibility:hidden;
-    box-shadow:inset 0 7px 13px rgba(255,255,255,.6), inset 0 -13px 18px rgba(0,0,0,.5);}
-  .coin-face.front{transform:translateZ(calc(var(--thick,13px)/2));}
-  .coin-face.back{transform:rotateY(180deg) translateZ(calc(var(--thick,13px)/2));}
-  .coin-face::after{content:""; position:absolute; inset:0; pointer-events:none;
-    -webkit-mask:var(--mask) center/86% no-repeat; mask:var(--mask) center/86% no-repeat;
-    background:linear-gradient(125deg,transparent 40%,rgba(255,255,255,.45) 47%,transparent 55%);}
-  /* extruded body: many stacked symbol slices fill the depth → a solid milled edge */
-  .coin-body{position:absolute; inset:0; transform-style:preserve-3d;}
-  .coin-body .slice{position:absolute; inset:0; background:var(--rim,#444);
-    -webkit-mask:var(--mask) center/86% no-repeat; mask:var(--mask) center/86% no-repeat;}
-  .coin-hint{font-size:12px; color:var(--muted2); font-weight:600; text-align:center;}
-
-  /* ---------- boarding pass flip ---------- */
-  .pass-wrap{display:flex; flex-direction:column; align-items:center; gap:14px; margin-bottom:54px; perspective:1600px;}
-  .pass{width:min(460px,94vw); height:212px; position:relative; transform-style:preserve-3d;
-    transition:transform 1s cubic-bezier(.65,0,.35,1); cursor:pointer; will-change:transform;}
-  .pass.flip{transform:rotateY(180deg);}
-  .pass-face{position:absolute; inset:0; -webkit-backface-visibility:hidden; backface-visibility:hidden;
-    -webkit-transform:translateZ(0); border-radius:20px; border:1px solid var(--card-brd);
-    box-shadow:var(--shadow); overflow:hidden;}
-  .pass-front{background:linear-gradient(135deg,#0c1430,#15264f); display:grid; grid-template-columns:1fr 116px;}
-  .pass-main{padding:18px 20px; display:flex; flex-direction:column; gap:8px;}
-  .pass-air{font-size:11px; letter-spacing:.12em; font-weight:800; color:var(--accent);}
-  .pass-air span{color:var(--muted2);}
-  .pass-route{font-size:40px; font-weight:850; letter-spacing:-.02em; line-height:1;}
-  .pass-route b{background:linear-gradient(110deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent;}
-  .pass-meta{display:flex; justify-content:space-between; max-width:210px; font-size:12px; color:var(--muted); margin-top:-2px;}
-  .pass-info{display:flex; gap:22px; margin-top:auto; font-size:14px; font-weight:700;}
-  .pass-info i{display:block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted2); font-style:normal; font-weight:700;}
-  .pass-stub{border-left:2px dashed rgba(255,255,255,.18); display:flex; flex-direction:column;
-    align-items:center; justify-content:space-between; padding:18px 0; position:relative;
-    background:rgba(255,255,255,.03);}
-  .pass-stub::before,.pass-stub::after{content:""; position:absolute; left:-9px; width:16px; height:16px;
-    border-radius:50%; background:var(--bg0);}
-  .pass-stub::before{top:-8px;} .pass-stub::after{bottom:-8px;}
-  .barcode{width:64px; height:90px;
-    background:repeating-linear-gradient(90deg,#cfe9ff 0 2px,transparent 2px 4px,#cfe9ff 4px 5px,transparent 5px 9px);
-    opacity:.85; border-radius:3px;}
-  .pass-tap{font-size:11px; font-weight:800; color:var(--accent); letter-spacing:.08em;}
-  .pass-back{transform:rotateY(180deg); display:grid; place-items:center; text-align:center; gap:2px;
-    background:linear-gradient(160deg,rgba(94,235,212,.16),rgba(115,140,255,.12)),var(--bg1);}
-  .pass-back .pass-em{font-size:64px; filter:drop-shadow(0 8px 20px rgba(0,0,0,.5));}
-  .pass-unlocked{font-size:11px; letter-spacing:.18em; text-transform:uppercase; font-weight:800; color:var(--accent);}
-  .pass-name{font-size:28px; font-weight:850; letter-spacing:-.02em; margin-bottom:6px;}
-  .pass-hint{font-size:13px; color:var(--muted2); font-weight:600;}
-
-  /* ---------- feed mockups ---------- */
-  .feed-grid{display:grid; grid-template-columns:1.1fr 1fr; gap:48px; align-items:center;}
-  @media(max-width:860px){.feed-grid{grid-template-columns:1fr;}}
-  .feed-col{display:flex; flex-direction:column; gap:14px;}
-  .post{background:var(--card); border:1px solid var(--card-brd); border-radius:18px; padding:16px;}
-  .post .top{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
-  .ava{width:38px; height:38px; border-radius:50%; display:grid; place-items:center; font-weight:800; color:#04211b;
-    background:linear-gradient(140deg,var(--accent),var(--accent2));}
-  .post .nm{font-weight:700; font-size:14px;}
-  .post .sub{font-size:12px; color:var(--muted2);}
-  .post .body{font-size:15px; color:var(--text);}
-  .post .route{display:inline-flex; align-items:center; gap:8px; margin-top:10px; font-size:13px;
-    color:var(--accent); font-weight:700; background:rgba(94,235,212,.1); padding:6px 12px; border-radius:999px;}
-  .post .meta{display:flex; gap:16px; margin-top:12px; font-size:12px; color:var(--muted2); font-weight:600; flex-wrap:wrap;}
-
-  /* ---------- phone mockups ---------- */
-  .phones{display:flex; gap:28px; justify-content:center; flex-wrap:wrap;}
-  .phone{width:255px; height:540px; border-radius:42px; background:linear-gradient(180deg,var(--bg1),var(--bg2));
-    border:1px solid var(--card-brd); box-shadow:0 0 0 9px #14141a, var(--shadow); position:relative; overflow:hidden; flex:none;}
-  .phone .notch{position:absolute; top:0; left:50%; transform:translateX(-50%); width:108px; height:24px;
-    background:#14141a; border-radius:0 0 16px 16px; z-index:5;}
-  .phone .scr{position:absolute; inset:0; padding:34px 14px 14px; display:flex; flex-direction:column; gap:10px;}
-  .phone h5{margin:4px 2px 6px; font-size:22px; font-weight:850; letter-spacing:-.02em;}
-  .mini{background:var(--card); border:1px solid var(--card-brd); border-radius:14px; padding:12px;}
-  .mini .r{display:flex; align-items:center; gap:9px;}
-  .mini .big{font-size:30px; font-weight:850; letter-spacing:-.02em;}
-  .mini .lab{font-size:11px; color:var(--muted2); text-transform:uppercase; letter-spacing:.07em; font-weight:700;}
-  .rk{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid rgba(255,255,255,.05); font-size:13px;}
-  .rk .pos{width:22px; font-weight:800; color:var(--muted2);}
-  .rk .pos.g{color:var(--gold);}
-  .pgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
-  .pgrid div{aspect-ratio:1; border-radius:12px; display:grid; place-items:center; font-size:22px;
-    background:var(--card); border:1px solid var(--card-brd);}
-  @media(max-width:560px){.phone{width:210px; height:444px;}}
-
-  /* ---------- comparison table ---------- */
-  .ctable{width:100%; border-collapse:separate; border-spacing:0; font-size:15px; min-width:560px;
-    border:1px solid var(--card-brd); border-radius:18px; overflow:hidden;}
-  .ctable th,.ctable td{padding:18px 16px; text-align:center; border-bottom:1px solid var(--card-brd);}
-  .ctable th{font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted2); font-weight:700;}
-  .ctable thead th:first-child{text-align:left;}
-  .ctable td:first-child{text-align:left; font-weight:600; color:var(--text);}
-  .ctable .trek{background:linear-gradient(180deg,rgba(94,235,212,.1),rgba(115,140,255,.04));}
-  .ctable th.trek{color:var(--accent);}
-  .ctable .yes{color:var(--accent); font-weight:800;}
-  .ctable .no{color:var(--muted2);}
-  .ctable tr:last-child td{border-bottom:none;}
-  .table-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
-
-  /* ---------- waitlist ---------- */
-  .waitlist{background:radial-gradient(ellipse 100% 100% at 50% 0%,rgba(115,140,255,.12),transparent 60%);}
-  .wl-card{max-width:560px; margin:0 auto; background:var(--card); border:1px solid var(--card-brd);
-    border-radius:26px; padding:40px; box-shadow:var(--shadow); text-align:center;}
-  .wl-card form{display:flex; flex-direction:column; gap:12px; margin-top:26px;}
-  .wl-card input{width:100%; padding:15px 18px; border-radius:14px; border:1px solid var(--card-brd);
-    background:rgba(255,255,255,.04); color:var(--text); font-size:16px; outline:none; transition:border-color .25s;}
-  .wl-card input:focus{border-color:var(--accent);}
-  .wl-card input::placeholder{color:var(--muted2);}
-  .wl-note{font-size:13px; color:var(--muted2); margin-top:14px;}
-  .wl-success{display:none; padding:20px; border-radius:16px; background:rgba(94,235,212,.12);
-    border:1px solid rgba(94,235,212,.4); color:var(--text); font-weight:600; margin-top:20px;}
-
-  /* ---------- early-access modal ---------- */
-  .modal{position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center; padding:20px;}
-  .modal.open{display:flex;}
-  .modal-backdrop{position:absolute; inset:0; background:rgba(4,7,16,.74);
-    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); opacity:0; transition:opacity .3s;}
-  .modal.open .modal-backdrop{opacity:1;}
-  .modal-card{position:relative; z-index:2; width:100%; max-width:480px; text-align:center;
-    background:linear-gradient(180deg,#0d1530,#0b1124); border:1px solid var(--card-brd);
-    border-radius:26px; padding:42px 38px; box-shadow:var(--shadow);
-    transform:scale(.92) translateY(14px); opacity:0; transition:transform .4s cubic-bezier(.2,.85,.25,1), opacity .35s;}
-  .modal.open .modal-card{transform:none; opacity:1;}
-  .modal-card form{display:flex; flex-direction:column; gap:12px; margin-top:24px;}
-  .modal-card input{width:100%; padding:15px 18px; border-radius:14px; border:1px solid var(--card-brd);
-    background:rgba(255,255,255,.04); color:var(--text); font-size:16px; outline:none; transition:border-color .25s;}
-  .modal-card input:focus{border-color:var(--accent);}
-  .modal-card input::placeholder{color:var(--muted2);}
-  .modal-close{position:absolute; top:14px; right:16px; width:36px; height:36px; border-radius:50%;
-    border:1px solid var(--card-brd); background:rgba(255,255,255,.05); color:var(--muted);
-    font-size:15px; cursor:pointer; transition:background .2s, color .2s;}
-  .modal-close:hover{background:rgba(255,255,255,.12); color:var(--text);}
-  body.modal-open{overflow:hidden;}
-
-  /* ---------- counter / social proof ---------- */
-  .counter{font-size:clamp(56px,11vw,120px); font-weight:850; letter-spacing:-.04em;
-    background:linear-gradient(110deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent;}
-  .avatars{display:flex; justify-content:center; margin:20px 0;}
-  .avatars span{width:42px; height:42px; border-radius:50%; margin-left:-12px; border:2px solid var(--bg0);
-    display:grid; place-items:center; font-weight:800; font-size:15px; color:#04211b;}
-
-  /* ---------- final cta ---------- */
-  .final{padding:160px 0; text-align:center; position:relative; overflow:hidden;}
-  .final .glow.c{width:700px; height:700px; background:radial-gradient(circle,var(--accent2),transparent 70%);
-    left:50%; top:50%; transform:translate(-50%,-50%); opacity:.18;}
-  .final h2{font-size:clamp(38px,7vw,86px); max-width:1000px; margin:0 auto 30px;}
-
-  /* ---------- footer ---------- */
-  footer{border-top:1px solid var(--card-brd); padding:46px 0; color:var(--muted2); font-size:14px;}
-  .foot-inner{display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; align-items:center;}
-  .foot-links{display:flex; gap:24px;}
-
-  .stat-row{display:flex; gap:40px; flex-wrap:wrap; margin-top:50px;}
-  .stat .num{font-size:clamp(30px,4vw,44px); font-weight:850; letter-spacing:-.03em;}
-  .stat .lab{color:var(--muted); font-size:14px; margin-top:4px;}
-
-  .maptip{background:rgba(7,11,24,.85)!important; border:1px solid rgba(255,255,255,.15)!important;
-    color:#eef4ff!important; font-weight:700!important; font-size:11px!important; box-shadow:none!important; border-radius:8px!important;}
-  .maptip::before{display:none!important;}
+  footer{border-top:1px solid var(--hair); padding:28px 24px; text-align:center; color:var(--muted2); font-size:13.5px;}
+  footer .links{margin-top:8px; display:flex; gap:16px; justify-content:center; color:var(--muted);}
 </style>
-  <script src="/config.js"></script>
 </head>
 <body>
 
-<!-- ================= NAV ================= -->
-<header class="nav" id="nav">
-  <div class="wrap nav-inner">
-    <a class="logo" href="#top">Trek<span class="dot">·</span>Rank</a>
-    <nav class="nav-links">
-      <a href="#problem">Why</a>
-      <a href="#map">Verified Miles</a>
-      <a href="#ranks">Ranks</a>
-      <a href="#badges">Badges</a>
-      <a href="app.html">Map</a>
-    </nav>
-    <a href="roamly.html" class="btn btn-primary">✨ Roamly</a>
-  </div>
+<header>
+  <nav class="nav">
+    <div class="logo"><span class="m">🦩</span>Roam<span class="grad">ly</span></div>
+    <div class="links">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="app.html">Hotspots</a>
+      <a href="roamly.html" class="btn btn-primary" style="padding:9px 18px; font-size:14px;">Plan my night ✨</a>
+    </div>
+  </nav>
 </header>
 
-<!-- ================= HERO ================= -->
-<section class="hero" id="top">
-  <div class="hero-bg">
-    <div class="hero-grid"></div>
-    <div class="glow a"></div><div class="glow b"></div>
-    <svg class="routes" viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#5eebd4"/><stop offset="1" stop-color="#738cff"/></linearGradient></defs>
-      <path d="M120,560 Q480,180 820,360"/>
-      <path d="M260,140 Q700,520 1180,240"/>
-      <path d="M80,300 Q520,640 1320,520"/>
-      <path d="M980,120 Q1120,420 1380,680"/>
-      <circle class="node" cx="120" cy="560" r="4"/><circle class="node" cx="820" cy="360" r="4"/>
-      <circle class="node" cx="260" cy="140" r="4"/><circle class="node" cx="1180" cy="240" r="4"/>
-      <circle class="node" cx="1320" cy="520" r="4"/><circle class="node" cx="980" cy="120" r="4"/>
-    </svg>
+<section class="hero wrap">
+  <div class="eyebrow">Your AI night-out planner</div>
+  <h1>Your night, <span class="grad">planned.</span></h1>
+  <p class="lead">Tell Roamly your budget and your vibe — it builds a real itinerary of places near you,
+    from dinner to drinks to the dessert you didn't know you needed.</p>
+  <div class="cta-row">
+    <a href="roamly.html" class="btn btn-primary">✨ Plan my night</a>
+    <a href="app.html" class="btn">📡 Explore hotspots</a>
   </div>
-  <div class="wrap hero-inner">
-    <div class="eyebrow reveal">Strava for travel · The social network for explorers</div>
-    <h1 class="display reveal d1">Travel.<br><span class="grad">Verified.</span></h1>
-    <p class="lead reveal d2">Track real adventures, earn verified travel miles, unlock ranks,
-      collect badges, and connect with explorers around the world.</p>
-    <div class="cta-row reveal d3">
-      <a href="app.html" class="btn btn-primary">Explore the Map →</a>
-      <a href="#early" class="btn btn-ghost">Join Early Access</a>
-    </div>
-    <div class="badge-line reveal d4">
-      <span>🛰️ <b>GPS-verified</b> journeys</span>
-      <span>🏆 <b>Ranks</b> &amp; reputation</span>
-      <span>🎖️ <b>25</b> collectible badges</span>
-      <span>🌍 <b>Global</b> leaderboards</span>
+
+  <div class="preview">
+    <div class="msg me"><div class="av">🙂</div><div class="bubble">$60, date night, something a little fancy 🍷</div></div>
+    <div class="msg"><div class="av">R</div><div class="bubble">Say less. Here's your night — three stops, all within a 12-minute walk:</div></div>
+    <div class="stops">
+      <div class="stop"><span class="time">7:00</span><span class="name">Bar Isabel</span><span class="cat">· dinner · Spanish</span></div>
+      <div class="stop"><span class="time">8:45</span><span class="name">Civil Liberties</span><span class="cat">· cocktails</span></div>
+      <div class="stop"><span class="time">10:15</span><span class="name">Sweet Olenka's</span><span class="cat">· dessert</span></div>
     </div>
   </div>
 </section>
 
-<!-- ================= PROBLEM ================= -->
-<section class="sec" id="problem">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow">The problem</div>
-      <h2 class="h2">Instagram <span class="grad">shows</span> travel.<br>TrekRank <span class="grad">proves</span> it.</h2>
-      <p class="lead">Today's platforms reward photos and follower counts — not the journey itself.
-        Anyone can post a beach. Nobody can verify the miles behind it. We fixed that.</p>
-    </div>
-    <div class="vs reveal d1">
-      <div class="panel dim">
-        <div class="tag">Traditional social</div>
-        <h3>Likes &amp; vanity</h3>
-        <ul>
-          <li><span class="ic">♡</span> Likes &amp; followers</li>
-          <li><span class="ic">▣</span> Staged photos</li>
-          <li><span class="ic">↻</span> Borrowed highlights</li>
-          <li><span class="ic">∅</span> Zero proof of travel</li>
-        </ul>
-      </div>
-      <div class="vs-mid"><span>VS</span></div>
-      <div class="panel win">
-        <div class="tag">TrekRank</div>
-        <h3>Proof &amp; progression</h3>
-        <ul>
-          <li><span class="ic">✓</span> Verified travel miles</li>
-          <li><span class="ic">✓</span> Exploration score &amp; rank</li>
-          <li><span class="ic">✓</span> Permanent travel history</li>
-          <li><span class="ic">✓</span> Earned achievements</li>
-        </ul>
-      </div>
-    </div>
+<section id="how" class="wrap">
+  <h2>How it <span class="grad">works</span></h2>
+  <p class="sub">No endless scrolling, no 47 open tabs. Just tell it what kind of night you want.</p>
+  <div class="grid3">
+    <div class="card"><span class="num">1</span><h3>Say the vibe</h3>
+      <p>Chill, chaotic, romantic, "we just got paid" — plus your budget. That's the whole input.</p></div>
+    <div class="card"><span class="num">2</span><h3>Get a real plan</h3>
+      <p>Roamly builds a stop-by-stop itinerary from real, open-right-now places near you — timed, budgeted, and mapped.</p></div>
+    <div class="card"><span class="num">3</span><h3>Go</h3>
+      <p>Every stop links straight to maps. Don't love a spot? Swap it in one tap and keep the night moving.</p></div>
   </div>
 </section>
 
-<!-- ================= LIVE MAP ================= -->
-<section class="sec" id="map">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow">The live travel map</div>
-      <h2 class="h2">Every journey counts.</h2>
-      <p class="lead">Start a trip, travel, end it. TrekRank turns the route into verified miles —
-        not a check-in, not a photo. Real movement across the real world.</p>
-    </div>
-    <div class="map-card reveal d1">
-      <div id="map"></div>
-      <div class="map-overlay">
-        <div class="chip"><div class="k">Route</div><div class="v">Toronto → Montréal</div></div>
-        <div class="chip"><div class="k">Verified distance</div><div class="v" id="miles">0 mi</div>
-          <div class="verified-tag">🛰️ GPS verified</div></div>
-      </div>
-    </div>
-    <div class="steps reveal d2">
-      <div class="step"><div class="n">01</div><h4>Start trip</h4><p>One tap begins tracking your route.</p></div>
-      <div class="step"><div class="n">02</div><h4>Travel</h4><p>Fly, ride, drive — the map records the path.</p></div>
-      <div class="step"><div class="n">03</div><h4>End trip</h4><p>We verify the distance traveled, automatically.</p></div>
-      <div class="step"><div class="n">04</div><h4>Earn miles</h4><p>Verified miles fuel your rank and badges.</p></div>
-    </div>
+<section id="features" class="wrap">
+  <h2>Built on <span class="grad">real places</span></h2>
+  <p class="sub">Not a listicle from 2019 — live data every time you plan.</p>
+  <div class="grid3">
+    <div class="card"><div class="ico">🍜</div><h3>Real venues, real ratings</h3>
+      <p>Restaurants, bars, and dessert spots pulled live with ratings, price levels, and hours.</p></div>
+    <div class="card"><div class="ico">🎟️</div><h3>Live events nearby</h3>
+      <p>Shows, gigs, and pop-ups happening tonight get woven right into your plan.</p></div>
+    <div class="card"><div class="ico">🌦️</div><h3>Weather-aware</h3>
+      <p>Raining? Roamly keeps the walk short and the stops cozy. Golden hour? Patio time.</p></div>
+    <div class="card"><div class="ico">💸</div><h3>Budget that behaves</h3>
+      <p>Set a number and the whole night fits inside it — no surprise $40 cocktails.</p></div>
+    <div class="card"><div class="ico">🗺️</div><h3>Mapped stop by stop</h3>
+      <p>See the whole route at a glance and open any stop in Google Maps instantly.</p></div>
+    <div class="card"><div class="ico">💬</div><h3>Chat to tweak it</h3>
+      <p>"Make it cheaper", "more dancing", "closer to me" — just say it and the plan updates.</p></div>
   </div>
 </section>
 
-<!-- ================= RANKS (sticky) ================= -->
-<section id="ranks">
-  <div class="rank-stage" id="rankStage" style="height:300vh">
-    <div class="rank-sticky">
-      <div class="wrap rank-grid">
-        <div>
-          <div class="eyebrow">The rank system</div>
-          <h2 class="h2" style="margin-bottom:14px">Climb from Explorer<br>to <span class="grad">Legend</span>.</h2>
-          <p class="lead" style="margin-bottom:26px">Your rank grows with verified miles, completed journeys,
-            and community activity. Every trip moves you up the ladder.</p>
-          <div class="rank-ladder" id="ladder"><!-- mini medals injected by JS --></div>
-        </div>
-        <div class="rank-badge">
-          <div class="rank-coin-wrap" id="rankCoin"></div>
-          <div class="rank-coin-label" id="orbLbl">Explorer</div>
-          <div class="rank-coin-hint">Tap the coin to flip it</div>
-        </div>
-      </div>
+<section class="wrap">
+  <div class="band">
+    <div class="txt">
+      <h2>📡 Hotspots near you</h2>
+      <p>Browse hand-picked hidden gems and trending spots on an interactive map — food, nightlife,
+        culture and more, city by city. Perfect for when you want to explore before you commit.</p>
     </div>
+    <a href="app.html" class="btn btn-lime">Open the hotspot map →</a>
   </div>
 </section>
 
-<!-- ================= BADGES ================= -->
-<section class="sec" id="badges">
-  <div class="wrap">
-    <div class="sec-head center reveal">
-      <div class="eyebrow">25 collectible badges</div>
-      <h2 class="h2">Collect the moments<br>that matter.</h2>
-      <p class="lead center">Your boarding pass becomes an achievement — scan it, and those miles are
-        verified for good. Every badge you earn lands in your followers' feeds.</p>
-    </div>
-
-    <!-- boarding pass → badge flip -->
-    <div class="pass-wrap reveal d1">
-      <div class="pass" id="pass" role="button" tabindex="0" aria-label="Flip the boarding pass">
-        <div class="pass-face pass-front">
-          <div class="pass-main">
-            <div class="pass-air">🧭 TREKRANK AIR · <span>BOARDING PASS</span></div>
-            <div class="pass-route"><b>YYZ</b> ✈ <b>YUL</b></div>
-            <div class="pass-meta"><span>Toronto</span><span>Montréal</span></div>
-            <div class="pass-info"><div><i>Flight</i>TR&nbsp;542</div><div><i>Seat</i>14A</div><div><i>Gate</i>B7</div></div>
-          </div>
-          <div class="pass-stub"><div class="barcode"></div><div class="pass-tap">tap →</div></div>
-        </div>
-        <div class="pass-face pass-back">
-          <span class="pass-em">✈️</span>
-          <div class="pass-unlocked">Badge unlocked</div>
-          <div class="pass-name">Takeoff</div>
-          <div class="verified-tag">🛰️ 331 miles verified</div>
-        </div>
-      </div>
-      <p class="pass-hint">Tap the boarding pass to flip it</p>
-    </div>
-
-    <!-- a taste of the collection -->
-    <div class="badge-grid reveal d2" id="badgeGrid"></div>
-    <div class="center reveal d3" style="margin-top:34px">
-      <a href="#early" class="more-pill">+40 more to collect &amp; share →</a>
-    </div>
-  </div>
+<section id="waitlist" class="wrap">
+  <h2>Get <span class="grad">early access</span></h2>
+  <p class="sub">Roamly is rolling out city by city. Drop your email and be first in line when it hits yours.</p>
+  <form class="wl-box" id="wlForm">
+    <input type="email" id="wlEmail" placeholder="you@example.com" required />
+    <button class="btn btn-primary" type="submit">Join the waitlist</button>
+  </form>
+  <div class="wl-note" id="wlNote"></div>
 </section>
-
-<!-- ================= COMMUNITY FEED ================= -->
-<section class="sec" id="feed">
-  <div class="wrap feed-grid">
-    <div class="reveal">
-      <div class="eyebrow">Built for travelers</div>
-      <h2 class="h2">A feed about<br><span class="grad">exploration</span> — not ads.</h2>
-      <p class="lead" style="margin-top:18px">Follow real explorers, discover routes, swap hidden gems and
-        recommendations. The whole community is centered on getting out into the world.</p>
-      <div class="stat-row">
-        <div class="stat"><div class="num grad">100%</div><div class="lab">Travel-first feed</div></div>
-        <div class="stat"><div class="num grad">0</div><div class="lab">Sponsored clutter</div></div>
-      </div>
-    </div>
-    <div class="feed-col reveal d1">
-      <div class="post">
-        <div class="top"><div class="ava">A</div><div><div class="nm">anya.cruz</div><div class="sub">Pathfinder · 2h ago</div></div></div>
-        <div class="body">Overnight train through the Alps was unreal. New city unlocked 🚆</div>
-        <span class="route">🚆 Zürich → Milan · 217 verified mi</span>
-        <div class="meta"><span>🎖️ Rail Rider earned</span><span>🌍 Country #14</span></div>
-      </div>
-      <div class="post">
-        <div class="top"><div class="ava">M</div><div><div class="nm">marco.travels</div><div class="sub">Navigator · 5h ago</div></div></div>
-        <div class="body">Hidden ramen spot near Shibuya — drop a follow if you want the pin 📍</div>
-        <span class="route">✈️ Toronto → Tokyo · 6,420 verified mi</span>
-        <div class="meta"><span>👑 Climbed to #3 global</span><span>📷 12 photos</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= GLOBAL COMMUNITY ================= -->
-<section class="sec" id="global">
-  <div class="wrap center" style="max-width:760px">
-    <div class="eyebrow reveal">A global community</div>
-    <h2 class="h2 reveal d1">Connect with explorers<br>worldwide.</h2>
-    <p class="lead center reveal d2" style="margin-top:18px">Follow travelers, discover their routes, compare ranks
-      on global leaderboards, and find the hidden gems only locals know.</p>
-    <div class="stat-row reveal d3" style="justify-content:center; margin-top:46px">
-      <div class="stat"><div class="num grad">195</div><div class="lab">Countries trackable</div></div>
-      <div class="stat"><div class="num grad">Top&nbsp;100</div><div class="lab">Global leaderboard</div></div>
-      <div class="stat"><div class="num grad">Live</div><div class="lab">Follow &amp; discover feed</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= COMPARE ================= -->
-<section class="sec" id="compare">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow">Why TrekRank is different</div>
-      <h2 class="h2">The only one built<br>to verify travel.</h2>
-    </div>
-    <div class="table-scroll reveal d1">
-      <table class="ctable">
-        <thead><tr>
-          <th></th><th class="trek">TrekRank</th><th>Instagram</th><th>Strava</th><th>TripAdvisor</th>
-        </tr></thead>
-        <tbody>
-          <tr><td>Verified travel</td><td class="trek yes">✓</td><td class="no">✕</td><td class="no">✕</td><td class="no">✕</td></tr>
-          <tr><td>Ranks &amp; progression</td><td class="trek yes">✓</td><td class="no">✕</td><td class="yes">✓</td><td class="no">✕</td></tr>
-          <tr><td>Achievements &amp; badges</td><td class="trek yes">✓</td><td class="no">✕</td><td class="yes">✓</td><td class="no">✕</td></tr>
-          <tr><td>Exploration tracking</td><td class="trek yes">✓</td><td class="no">✕</td><td class="no">~</td><td class="no">✕</td></tr>
-          <tr><td>Built for travelers</td><td class="trek yes">✓</td><td class="no">✕</td><td class="no">✕</td><td class="yes">✓</td></tr>
-          <tr><td>Travel community feed</td><td class="trek yes">✓</td><td class="yes">✓</td><td class="no">~</td><td class="no">~</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<!-- ================= APP PREVIEW ================= -->
-<section class="sec" id="app">
-  <div class="wrap">
-    <div class="sec-head center reveal">
-      <div class="eyebrow">Coming to iPhone</div>
-      <h2 class="h2">Your travel life,<br>beautifully ranked.</h2>
-    </div>
-    <div class="phones reveal d1">
-      <div class="phone"><div class="notch"></div><div class="scr">
-        <h5>Profile</h5>
-        <div class="mini"><div class="r"><div class="ava">S</div><div><div class="nm" style="font-weight:800">Saillesh</div><div class="lab">World Traveler · 🏆</div></div></div></div>
-        <div class="mini"><div class="lab">Verified miles</div><div class="big grad">68,420</div></div>
-        <div class="mini"><div class="r"><div><div class="big">27</div><div class="lab">Countries</div></div><div style="flex:1"></div><div><div class="big">63</div><div class="lab">Cities</div></div></div></div>
-      </div></div>
-      <div class="phone"><div class="notch"></div><div class="scr">
-        <h5>Ranks</h5>
-        <div class="mini" style="padding:8px 12px">
-          <div class="rk"><span class="pos g">1</span><div class="ava" style="width:26px;height:26px;font-size:12px">A</div><span>anya.cruz</span></div>
-          <div class="rk"><span class="pos g">2</span><div class="ava" style="width:26px;height:26px;font-size:12px">M</div><span>marco</span><span style="flex:1"></span><b>71k</b></div>
-          <div class="rk"><span class="pos g">3</span><div class="ava" style="width:26px;height:26px;font-size:12px">S</div><span>you</span><span style="flex:1"></span><b>68k</b></div>
-          <div class="rk"><span class="pos">4</span><div class="ava" style="width:26px;height:26px;font-size:12px">L</div><span>lena</span><span style="flex:1"></span><b>59k</b></div>
-          <div class="rk" style="border:none"><span class="pos">5</span><div class="ava" style="width:26px;height:26px;font-size:12px">K</div><span>kai</span><span style="flex:1"></span><b>52k</b></div>
-        </div>
-      </div></div>
-      <div class="phone"><div class="notch"></div><div class="scr">
-        <h5>Badges</h5>
-        <div class="pgrid">
-          <div>🗺️</div><div>🌎</div><div>🌍</div><div>🏆</div>
-          <div>✈️</div><div>🚆</div><div>🎖️</div><div>🌐</div>
-          <div>🗼</div><div>🏯</div><div>🦁</div><div>🦘</div>
-        </div>
-        <div class="mini" style="margin-top:4px"><div class="lab">Latest unlock</div><div class="r" style="margin-top:6px"><span style="font-size:26px">🌐</span><div><div class="nm" style="font-weight:800">Around the World</div><div class="sub" style="font-size:11px;color:var(--muted2)">50,000 km traveled</div></div></div></div>
-      </div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= WAITLIST COUNTER (social proof) ================= -->
-<section class="sec center" id="waitlist">
-  <div class="wrap">
-    <div class="avatars reveal" aria-hidden="true">
-      <span style="background:linear-gradient(140deg,#5eebd4,#738cff)">A</span>
-      <span style="background:linear-gradient(140deg,#ffd166,#ff7a9c)">M</span>
-      <span style="background:linear-gradient(140deg,#738cff,#5eebd4)">L</span>
-      <span style="background:linear-gradient(140deg,#ff7a9c,#ffd166)">K</span>
-      <span style="background:linear-gradient(140deg,#5eebd4,#ffd166)">+</span>
-    </div>
-    <div class="counter reveal d1" id="counter" data-target="4823">0</div>
-    <p class="lead center reveal d2" style="margin:6px auto 0">travelers already waiting to explore.</p>
-  </div>
-</section>
-
-<!-- ================= FINAL CTA ================= -->
-<section class="final" id="final">
-  <div class="glow c"></div>
-  <div class="wrap" style="position:relative; z-index:2">
-    <h2 class="reveal">Your adventures deserve<br>more than <span class="grad">likes</span>.</h2>
-    <a href="#early" class="btn btn-primary reveal d1" style="font-size:18px; padding:18px 36px">Join Early Access →</a>
-  </div>
-</section>
-
-<!-- ================= EARLY ACCESS MODAL ================= -->
-<div class="modal" id="waitlistModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Join early access">
-  <div class="modal-backdrop" data-close></div>
-  <div class="modal-card">
-    <button class="modal-close" data-close aria-label="Close">✕</button>
-    <div class="eyebrow" style="margin-bottom:10px">Early access</div>
-    <h2 style="font-size:clamp(26px,4vw,36px)">Join the first explorers.</h2>
-    <p class="lead center" style="margin:14px auto 0; font-size:16px">Join <b id="wlJoined" style="color:var(--text)">4,800+</b> travelers already in line.
-      Be first in when TrekRank launches — and reserve your username before they're gone.</p>
-    <form id="wlForm" novalidate>
-      <input type="text" id="wlName" placeholder="Your name" autocomplete="name" required />
-      <input type="email" id="wlEmail" placeholder="you@email.com" autocomplete="email" required />
-      <input type="text" id="wlUser" placeholder="Reserve a username (optional)" autocomplete="off" />
-      <button class="btn btn-primary" type="submit" style="justify-content:center">Request Early Access →</button>
-    </form>
-    <div class="wl-success" id="wlSuccess">🎉 You're on the list! Check your inbox — your spot is reserved.</div>
-    <div class="wl-note">No spam. One launch email. Your username is held for you.</div>
-  </div>
-</div>
 
 <footer>
-  <div class="wrap foot-inner">
-    <div class="logo">Trek<span class="dot">·</span>Rank</div>
-    <div class="foot-links">
-      <a href="#problem">Why</a><a href="#ranks">Ranks</a><a href="#badges">Badges</a><a href="#early">Early Access</a>
-    </div>
-    <div>© 2026 TrekRank · Travel. Verified.</div>
+  <div>© 2026 Roamly · your night, planned</div>
+  <div class="links">
+    <a href="roamly.html">Planner</a>
+    <a href="app.html">Hotspots</a>
+    <a href="#how">How it works</a>
   </div>
 </footer>
 
 <script>
-/* ---------- nav scroll state ---------- */
-const nav = document.getElementById('nav');
-addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 20), {passive:true});
-
-/* ---------- reveal on scroll ---------- */
-const io = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
-}, {threshold:.14, rootMargin:'0px 0px -8% 0px'});
-document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-
-/* ---------- animated number counter ---------- */
-function animateCount(el, target, dur=1800){
-  const start = performance.now();
-  const tick = (now) => {
-    const p = Math.min((now-start)/dur, 1);
-    const eased = 1 - Math.pow(1-p, 3);
-    el.textContent = Math.round(target*eased).toLocaleString();
-    if (p < 1) requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-}
-/* ---------- API base (production API serves the waitlist) ---------- */
-const API_BASE = window.API_BASE;
-
-const counter = document.getElementById('counter');
-// Pull the real live count; fall back to the seeded number if the API is unreachable.
-fetch(API_BASE + '/waitlist/count').then(r => r.json())
-  .then(d => { if (d && d.count){ counter.dataset.target = d.count;
-    const j = document.getElementById('wlJoined'); if (j) j.textContent = d.count.toLocaleString() + '+'; }})
-  .catch(()=>{});
-const cio = new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting){
-  animateCount(counter, +counter.dataset.target); cio.disconnect(); }}), {threshold:.5});
-cio.observe(counter);
-
-/* =================== 3D metallic medal system =================== */
-/* Solid silhouette symbols — the badge IS the symbol, metal-filled. (viewBox 0 0 48 48) */
-const SIL = {
-  plane:    '<path d="M46 4 18 21 4 18 1 22 11 28 14 41 19 35 21 27Z"/>',
-  globe:    '<circle cx="24" cy="24" r="17" fill="none" stroke-width="3.2"/><path d="M7 24h34" fill="none" stroke-width="2.4"/><ellipse cx="24" cy="24" rx="8" ry="17" fill="none" stroke-width="2.4"/>',
-  trophy:   '<path d="M14 8h20v6a10 10 0 0 1-20 0Z"/><path d="M14 9h-5a5 5 0 0 0 6 7M34 9h5a5 5 0 0 1-6 7" fill="none" stroke-width="3"/><rect x="21" y="23" width="6" height="8"/><rect x="13" y="31" width="22" height="5" rx="1"/><rect x="16" y="36" width="16" height="4" rx="1"/>',
-  orbit:    '<circle cx="24" cy="24" r="9"/><ellipse cx="24" cy="24" rx="20" ry="7" fill="none" stroke-width="3.5" transform="rotate(-25 24 24)"/>',
-  train:    '<rect x="10" y="9" width="28" height="22" rx="5"/><circle cx="17" cy="35" r="3"/><circle cx="31" cy="35" r="3"/><path d="M8 41h32" fill="none" stroke-width="3"/>',
-  cityhop:  '<rect x="6" y="22" width="9" height="20"/><rect x="18" y="13" width="11" height="29"/><rect x="32" y="26" width="9" height="16"/><rect x="22.5" y="5" width="2" height="9"/>',
-  polar:    '<path d="M3 41 17 16 26 31 32 21 45 41Z"/><circle cx="36" cy="12" r="5"/>',
-  downunder:'<path d="M11 6C28 9 39 24 41 43 31 39 22 30 18 19 16 14 13 10 11 6Z"/>',
-  backpack: '<rect x="12" y="12" width="24" height="30" rx="8"/><path d="M19 13c0-6 10-6 10 0" fill="none" stroke-width="3.5"/>',
-  crown:    '<path d="M7 36 5 13 16.5 22 24 7 31.5 22 43 13 41 36Z"/><rect x="7" y="37" width="34" height="5" rx="1"/>',
-  compass:  '<circle cx="24" cy="24" r="17" fill="none" stroke-width="4"/><path d="M24 9 28 24 24 39 20 24Z"/><path d="M9 24 24 20 39 24 24 28Z"/>',
-  map:      '<path d="M6 12 18 8 30 12 42 8V36L30 40 18 36 6 40Z"/>',
-  flame:    '<path d="M24 4c3 8 11 9 11 18a11 11 0 0 1-22 0c0-4 1.5-7 3-8 1 4 4 4 4 1 0-4 0-7 4-11Z"/>',
-  coffee:   '<path d="M11 18h22v10a11 11 0 0 1-22 0Z"/><path d="M33 19h4a5 5 0 0 1 0 10H31" fill="none" stroke-width="3.5"/><rect x="8" y="38" width="28" height="4" rx="2"/>',
-  moon:     '<path d="M32 6a16 16 0 1 0 10 27A13 13 0 0 1 32 6Z"/><path d="M14 9l1.7 4.6 4.6 1.7-4.6 1.7L14 22l-1.7-4.6L7.7 16l4.6-1.7Z"/>',
-  flag:     '<path d="M12 5v38" fill="none" stroke-width="4"/><path d="M12 7h24l-5 7 5 7H12Z"/>',
-};
-const METALS = {
-  gold:    {bg:'conic-gradient(from 215deg,#7a5b12,#ffe9a3,#d4af37,#fff6d5,#c9a52f,#7a5b12,#ffe39a,#d4af37,#7a5b12)', rim:'#5c4310'},
-  silver:  {bg:'conic-gradient(from 215deg,#5f6b7a,#f2f6fb,#aeb9c8,#ffffff,#94a0b0,#5f6b7a,#e3e9f1,#aeb9c8,#5f6b7a)', rim:'#46505c'},
-  bronze:  {bg:'conic-gradient(from 215deg,#5a3413,#eaa869,#c87f3a,#ffd9a8,#a8682c,#5a3413,#df9e5e,#c87f3a,#5a3413)', rim:'#3f250d'},
-  copper:  {bg:'conic-gradient(from 215deg,#6e2c12,#ff9e6b,#d6603a,#ffc8a6,#b04a26,#6e2c12,#ef8a58,#d6603a,#6e2c12)', rim:'#4d1f0d'},
-  steel:   {bg:'conic-gradient(from 215deg,#363f4d,#9fb1c6,#5d6d82,#cdd9e8,#525f72,#363f4d,#8ea1b8,#5d6d82,#363f4d)', rim:'#252c36'},
-  emerald: {bg:'conic-gradient(from 215deg,#0c5a42,#79efc2,#19a87c,#caffee,#138a66,#0c5a42,#6ae8b6,#19a87c,#0c5a42)', rim:'#083a2c'},
-  sapphire:{bg:'conic-gradient(from 215deg,#192a7a,#8aa6ff,#3f57cf,#cdd9ff,#314ac0,#192a7a,#7d9bff,#3f57cf,#192a7a)', rim:'#121d52'},
-  platinum:{bg:'conic-gradient(from 215deg,#7c8a9d,#f4f8ff,#c4d0e0,#ffffff,#b1bed2,#7c8a9d,#e7eef8,#c4d0e0,#7c8a9d)', rim:'#586271'},
-  amethyst:{bg:'conic-gradient(from 215deg,#4a1d73,#d59bff,#8a3fd4,#f1d7ff,#7a32c0,#4a1d73,#c98cff,#8a3fd4,#4a1d73)', rim:'#341452'},
-};
-function coinHTML({metal, scene, title='badge', size=104, static:isStatic=false}){
-  const m=METALS[metal]||METALS.silver;
-  const thick=Math.max(7, Math.round(size*0.11));
-  // the symbol silhouette becomes the medal — render it solid and use it as a mask
-  const svg=`<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48' fill='#000' stroke='#000' stroke-linejoin='round' stroke-linecap='round'>${scene}</svg>`;
-  const mask=`url(data:image/svg+xml;base64,${btoa(svg)})`;
-  const vars=`--cs:${size}px;--metal:${m.bg};--mask:${mask};--rim:${m.rim};--thick:${thick}px;`;
-  // extruded body: stacked symbol-masked slices between the two faces, with a reeded sheen
-  const N=Math.max(8, Math.min(26, thick));
-  let body='';
-  for(let i=0;i<N;i++){
-    const z=(-thick/2 + 0.6) + (thick-1.2)*(i/(N-1));
-    const b=(0.72 + 0.34*Math.abs(Math.sin(i/(N-1)*Math.PI*4))).toFixed(2);
-    body+=`<div class="slice" style="transform:translateZ(${z.toFixed(2)}px); filter:brightness(${b})"></div>`;
-  }
-  return `<div class="coin3d${isStatic?' static':''}" style="${vars}">
-    <div class="coin" role="button" tabindex="0" aria-label="${title} badge — drag to spin">
-      <div class="coin-body">${body}</div>
-      <div class="coin-face back"></div>
-      <div class="coin-face front"></div>
-    </div></div>`;
-}
-
-/* A real slice of the 25-badge catalog — names + requirements match what the
-   app actually awards (see backend/scripts/seed_badges.py, the source of truth).
-   [metal, scene, fullName, funline, requirement(short), coinName(short)] */
-const BADGES = [
-  ['bronze',  SIL.map,      'First Steps','Wheels up.','Your first trip','First Steps'],
-  ['bronze',  SIL.globe,    'Explorer','5 countries deep.','5 countries','Explorer'],
-  ['gold',    SIL.trophy,   'World Traveler','25 stamps strong.','25 countries','World'],
-  ['sapphire',SIL.orbit,    'Around the World','50,000 km. Respect.','50,000 km','Worldwide'],
-  ['steel',   SIL.plane,    'Takeoff','Wheels up.','Your first flight','Takeoff'],
-  ['steel',   SIL.train,    'Rail Rider','Track addict.','10 train trips','Rail Rider'],
-  ['emerald', SIL.cityhop,  'City Hopper','10 cities, no chill.','10 cities','City Hopper'],
-  ['platinum',SIL.polar,    'Polar Pioneer','You went there?!','Set foot in Antarctica','Polar'],
-  ['copper',  SIL.downunder,'Down Under','G’day, legend.','Set foot in Oceania','Down Under'],
-  ['emerald', SIL.flag,     'Eurotrip','Old world unlocked.','Visit all of Europe','Eurotrip'],
-  ['gold',    SIL.globe,    'Worldwide','Every continent, done.','Every inhabited continent','Worldwide'],
-  ['copper',  SIL.backpack, 'Weekend Warrior','3 trips, 1 month.','3 trips in a month','Weekender'],
-  ['amethyst',SIL.crown,    'Legendary Explorer','Untouchable.','50 countries','Legendary'],
-];
-document.getElementById('badgeGrid').innerHTML = BADGES.map(([metal,scene,nm,fun,req,short]) => `
-  <div class="bcard"><div class="shine"></div>
-    ${coinHTML({metal,scene,title:short,size:104})}
-    <div class="nm">${nm}</div><div class="ds">${fun}</div><div class="req">${req}</div></div>`).join('');
-
-/* boarding-pass back → a real Takeoff medal */
-const passEm = document.querySelector('.pass-em');
-if (passEm) passEm.outerHTML = `<div class="pass-medal">${coinHTML({metal:'silver',scene:SIL.plane,title:'Takeoff',size:96})}</div>`;
-
-/* ---------- coins are real 3D objects: drag to spin, tap to flip ---------- */
-(function(){
-  let active=null, sx=0, sy=0, baseX=0, baseY=0, moved=false;
-  const rot = c => c.__rot || (c.__rot={x:10, y:-14});
-  const apply = c => { const r=rot(c); c.style.transform=`rotateX(${r.x}deg) rotateY(${r.y}deg)`; };
-  function down(e){
-    const c = e.target.closest('.coin'); if(!c) return;
-    active=c; moved=false; sx=e.clientX; sy=e.clientY;
-    const r=rot(c); baseX=r.x; baseY=r.y;
-    c.classList.add('spin');
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up, {once:true});
-  }
-  function move(e){
-    if(!active) return;
-    const dx=e.clientX-sx, dy=e.clientY-sy;
-    if(Math.abs(dx)+Math.abs(dy) > 4) moved=true;
-    const r=rot(active);
-    r.y = baseY + dx*0.6;
-    r.x = Math.max(-78, Math.min(78, baseX - dy*0.6));
-    apply(active);
-  }
-  function up(){
-    if(!active) return;
-    const c=active; active=null;
-    window.removeEventListener('pointermove', move);
-    c.classList.remove('spin');               // re-enable easing for the flip
-    if(!moved){ const r=rot(c); r.y += 180; apply(c); }   // tap = flip to the other face
-  }
-  document.addEventListener('pointerdown', down);
-  document.addEventListener('keydown', e => {
-    if(e.key!=='Enter' && e.key!==' ') return;
-    const c = e.target.closest && e.target.closest('.coin'); if(!c) return;
-    e.preventDefault(); const r=rot(c); r.y += 180; apply(c);
-  });
-})();
-
-/* ---------- boarding pass: press to flip (ignore taps on the coin) ---------- */
-const pass = document.getElementById('pass');
-pass.addEventListener('click', e => { if(e.target.closest('.coin')) return; pass.classList.toggle('flip'); });
-pass.addEventListener('keydown', (e) => { if((e.key==='Enter'||e.key===' ') && !e.target.closest('.coin')){ e.preventDefault(); pass.classList.toggle('flip'); }});
-
-/* ---------- rank sticky scroll → coin morphs metal/shape per tier ---------- */
-const RANKS = [
-  {n:'Explorer',      metal:'bronze',  scene:SIL.compass, mi:'0–2K mi',     desc:'Your first stamps. Log a trip and the journey begins.'},
-  {n:'Pathfinder',    metal:'steel',   scene:SIL.map,     mi:'2K–8K mi',    desc:'Finding your rhythm — a few countries down, momentum building.'},
-  {n:'Navigator',     metal:'silver',  scene:SIL.globe,   mi:'8K–20K mi',   desc:'You know your way around. Verified miles really adding up.'},
-  {n:'Trailblazer',   metal:'copper',  scene:SIL.flame,   mi:'20K–50K mi',  desc:'Off the beaten path. You travel more than almost anyone.'},
-  {n:'World Traveler',metal:'gold',    scene:SIL.trophy,  mi:'50K–100K mi', desc:'A passport full of proof. Top-tier explorer status.'},
-  {n:'Legend',        metal:'amethyst',scene:SIL.crown,   mi:'100K+ mi',    desc:'The summit. 100,000+ verified miles. Untouchable.'},
-];
-const rankCoin = document.getElementById('rankCoin');
-const orbLbl = document.getElementById('orbLbl');
-const stage = document.getElementById('rankStage');
-
-/* build the scroll-through ladder of mini medals (replaces the old emoji list) */
-document.getElementById('ladder').innerHTML = RANKS.map((r,i) => `
-  <div class="rank-item" data-i="${i}">
-    ${coinHTML({metal:r.metal, scene:r.scene, title:r.n, size:50, static:true})}
-    <div><div class="nm">${r.n}</div><div class="desc">${r.desc}</div></div>
-  </div>`).join('');
-const items = [...document.querySelectorAll('.rank-item')];
-
-let curTier = -1;
-function setRank(idx){
-  const r = RANKS[idx];
-  const size = Math.min(290, Math.round(innerWidth * 0.6));
-  rankCoin.innerHTML = coinHTML({metal:r.metal, scene:r.scene, title:r.n, size});
-  orbLbl.textContent = r.n;
-  items.forEach(it => it.classList.toggle('on', +it.dataset.i === idx));
-}
-function onRankScroll(){
-  const rect = stage.getBoundingClientRect();
-  const total = stage.offsetHeight - innerHeight;
-  const p = Math.min(Math.max(-rect.top/total, 0), .9999);
-  const idx = Math.min(Math.floor(p * RANKS.length), RANKS.length-1);
-  if (idx !== curTier){ curTier = idx; setRank(idx); }
-}
-addEventListener('scroll', onRankScroll, {passive:true}); onRankScroll();
-
-/* ---------- live verified-miles map (reuses Leaflet) ---------- */
-function initMap(){
-  if (typeof L === 'undefined'){ return setTimeout(initMap, 200); }
-  const TOR=[43.6532,-79.3832], MTL=[45.5019,-73.5674];
-  const map = L.map('map',{zoomControl:false, attributionControl:false, scrollWheelZoom:false, dragging:false, doubleClickZoom:false})
-    .fitBounds([TOR,MTL],{padding:[60,60]});
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-  const dot = (ll,label)=>L.circleMarker(ll,{radius:7,color:'#5eebd4',fillColor:'#5eebd4',fillOpacity:1,weight:2})
-    .addTo(map).bindTooltip(label,{permanent:true,direction:'top',className:'maptip'});
-  dot(TOR,'Toronto'); dot(MTL,'Montréal');
-  const pts=[]; const N=60;
-  for(let i=0;i<=N;i++){ const t=i/N; pts.push([TOR[0]+(MTL[0]-TOR[0])*t, TOR[1]+(MTL[1]-TOR[1])*t]); }
-  const line = L.polyline([],{color:'#5eebd4',weight:4,opacity:.9}).addTo(map);
-  const milesEl=document.getElementById('miles'); const TARGET=331; // ~ Toronto–Montréal miles
-  let i=0;
-  const grow=()=>{ if(i<=N){ line.addLatLng(pts[i]); milesEl.textContent=Math.round(TARGET*(i/N))+' mi'; i++; setTimeout(grow,28);} };
-  const mio=new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting){ grow(); mio.disconnect(); }}),{threshold:.4});
-  mio.observe(document.getElementById('map'));
-}
-addEventListener('load', initMap);
-
-/* ---------- early-access modal ---------- */
-const modal = document.getElementById('waitlistModal');
-function openWaitlist(){
-  modal.classList.add('open'); document.body.classList.add('modal-open');
-  modal.setAttribute('aria-hidden','false');
-  setTimeout(()=>document.getElementById('wlName').focus(), 320);
-}
-function closeWaitlist(){
-  modal.classList.remove('open'); document.body.classList.remove('modal-open');
-  modal.setAttribute('aria-hidden','true');
-}
-// Any link/button pointing at #early opens the popup instead of scrolling.
-document.querySelectorAll('a[href="#early"]').forEach(a =>
-  a.addEventListener('click', e => { e.preventDefault(); openWaitlist(); }));
-modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeWaitlist));
-addEventListener('keydown', e => { if(e.key==='Escape' && modal.classList.contains('open')) closeWaitlist(); });
-
-/* ---------- waitlist form ---------- */
-const form = document.getElementById('wlForm');
-form.addEventListener('submit', async (e) => {
+const API = window.API_BASE;
+document.getElementById('wlForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = document.getElementById('wlName').value.trim();
   const email = document.getElementById('wlEmail').value.trim();
-  const username = document.getElementById('wlUser').value.trim();
-  if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
-    document.getElementById(name ? 'wlEmail' : 'wlName').focus(); return;
-  }
-  const btn = form.querySelector('button'); btn.disabled = true; btn.textContent = 'Reserving…';
-  let liveCount = null, already = false;
+  const note = document.getElementById('wlNote');
+  note.textContent = 'Adding you…';
   try {
-    const res = await fetch(API_BASE + '/waitlist', {
+    const res = await fetch(`${API}/waitlist`, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({name, email, username})
+      body: JSON.stringify({ email })
     });
-    if (res.ok){ const d = await res.json(); liveCount = d.count; already = d.already_joined; }
-  } catch(_){
-    // Offline / API unreachable: keep a local copy so nothing is lost.
-    try {
-      const list = JSON.parse(localStorage.getItem('trekrank_waitlist')||'[]');
-      list.push({name, email, username, ts:Date.now()});
-      localStorage.setItem('trekrank_waitlist', JSON.stringify(list));
-    } catch(__){}
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    note.textContent = data.already_joined
+      ? "You're already on the list — see you soon! 💜"
+      : `You're in! You're one of ${data.count.toLocaleString()} people waiting. 🎉`;
+  } catch {
+    const list = JSON.parse(localStorage.getItem('roamly_waitlist') || '[]');
+    if (!list.includes(email)) list.push(email);
+    localStorage.setItem('roamly_waitlist', JSON.stringify(list));
+    note.textContent = "You're in! We'll be in touch. 🎉";
   }
-  form.style.display='none';
-  const s=document.getElementById('wlSuccess'); s.style.display='block';
-  s.textContent = already
-    ? `👋 Welcome back, ${name}! You're already on the list.`
-    : (username ? `🎉 You're in, ${name}! @${username} is reserved for you.`
-                : `🎉 You're on the list, ${name}! Watch your inbox.`);
-  const c=document.getElementById('counter');
-  if(c) c.textContent = (liveCount ?? (+c.dataset.target+1)).toLocaleString();
+  e.target.reset();
 });
 </script>
 </body>
