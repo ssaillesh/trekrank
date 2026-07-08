@@ -19,6 +19,7 @@ from app.services import events as events_svc
 from app.services.geocoding import geocode
 from app.services.planner import (
     build_plan, build_trip, VIBE_PLANS, gather_options, option_sections, build_from_selection,
+    _WATER_WORDS,
 )
 
 router = APIRouter(prefix="/plan", tags=["planner"])
@@ -68,10 +69,29 @@ Your job: read the whole conversation and output ONLY JSON (no prose) with these
   ready: true ONLY if budget AND vibe are known
   question: if not ready, ONE concise concierge-style question to get the missing essentials
   quick_replies: array of 2-5 short tappable answers for that question
+IMPORTANT: if the latest message asks for a NEW or SEPARATE plan (a "plan B", a plan for
+another group / different people, "start over", a different day), extract preferences from
+THAT request alone — do not carry over budget, vibe, group or interests from earlier plans
+unless the user explicitly says "same as before". Ask again for anything now missing.
 Planning is optimised for stops close together, best value, and a hidden gem — so a
 walkable, budget-fitting plan. Prefer to gather time_of_day, transport, group_type and
 dietary when natural, but NEVER block a plan on them: if budget and vibe are known,
 set ready=true and leave the rest null. Ask at most what's essential, in one question."""
+
+
+# "Plan B" / new-plan detection: when the guest pivots to a separate plan (another
+# group, a second itinerary), drop the old conversation so plan A's budget/vibe/group
+# don't bleed into plan B. The last message becomes the whole context.
+_FRESH_RE = re.compile(
+    r"\b(plan b|new plan|fresh plan|start over|from scratch|second (plan|itinerary)"
+    r"|another (plan|itinerary|one for)|(plan|itinerary) for (another|a different|my other)"
+    r"|different (group|crew|people|friends))\b")
+
+
+def _fresh_cut(req: ChatRequest) -> ChatRequest:
+    if len(req.messages) > 1 and _FRESH_RE.search(req.messages[-1].content.lower()):
+        return req.model_copy(update={"messages": [req.messages[-1]]})
+    return req
 
 
 def _joined_user_text(req):
@@ -195,6 +215,12 @@ def _resolve(req: ChatRequest):
         if coords:
             lat, lng = coords
 
+    # Water activities (kayaking, waterbiking, beach…) count as an interest even
+    # when the extractor misses them, so the planner routes to water venues.
+    water_hits = [w for w in _WATER_WORDS if w in text]
+    if water_hits and not any(w in (prefs.get("interests") or "").lower() for w in _WATER_WORDS):
+        prefs["interests"] = ", ".join(filter(None, [prefs.get("interests"), *water_hits[:3]]))
+
     if not prefs.get("budget") and any(w in text for w in ["no limit", "no object", "unlimited"]):
         prefs["budget"] = 500
     group_kw = any(w in text for w in ["boys", "guys", "bros", "the crew", "squad", "group of",
@@ -236,6 +262,7 @@ def _resolve(req: ChatRequest):
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
+    req = _fresh_cut(req)
     text = _joined_user_text(req)
     last = req.messages[-1].content.lower() if req.messages else ""
     lat, lng, prefs = _resolve(req)
@@ -257,7 +284,8 @@ def chat(req: ChatRequest):
 
     # A "try another / something different" gives fresh picks instead of repeating.
     opts["vary"] = any(w in last for w in ["another", "different", "something else",
-                                            "try again", "switch", "change it", "new plan", "not this"])
+                                            "try again", "switch", "change it", "new plan",
+                                            "not this", "plan b"])
     # How full to make the day (whole day → more stops; evening → fewer).
     opts["target_stops"] = _target_stops(text, opts.get("time_of_day"))
 
@@ -278,6 +306,7 @@ def chat(req: ChatRequest):
 @router.post("/options", response_model=OptionsResponse)
 def options(req: ChatRequest):
     """Build-your-own: ranked, tagged candidate venues per category to pick from."""
+    req = _fresh_cut(req)
     lat, lng, prefs = _resolve(req)
     if lat is None or lng is None:
         return OptionsResponse(ok=False,

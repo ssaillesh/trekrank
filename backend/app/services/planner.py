@@ -35,7 +35,7 @@ BUZZ_WEIGHT = 0.7
 # Every plan is built as activity + food + leisure so it's never all restaurants.
 SLOT_SPECS = {
     "cafe":    {"label": "Coffee & warm-up", "icon": "☕", "yelp": {"categories": "coffee,cafes"}, "osm": "food", "base": 8},
-    "scenic":  {"label": "Scenic spot",      "icon": "🌇", "yelp": {"categories": "parks,landmarks", "term": "scenic view"}, "osm": "nature", "base": 0},
+    "scenic":  {"label": "Scenic & free",    "icon": "🌇", "yelp": {"categories": "parks,beaches,gardens,landmarks", "term": "scenic view"}, "osm": "nature", "base": 0},
     "activity":{"label": "Activity",         "icon": "🎡", "yelp": {"categories": "aquariums,zoos,museums,galleries,arcades,escapegames,amusementparks,bowling,active,arts", "term": "things to do"}, "osm": "activities", "base": 28},
     "lunch":   {"label": "Lunch",            "icon": "🥗", "yelp": {"categories": "restaurants", "term": "lunch"}, "osm": "food", "base": 18},
     "dinner":  {"label": "Dinner",           "icon": "🍽️", "yelp": {"categories": "restaurants", "term": "dinner"}, "osm": "food", "base": 30},
@@ -63,9 +63,9 @@ DEFAULT_VIBE = "romantic"
 # the day the guest wants filled — so a full day is many stops, an evening is few.
 # Repeated slot types (e.g. two activities) resolve to different venues.
 ARCS = {
-    "morning":   ["cafe", "activity", "lunch", "activity", "dinner", "leisure", "dessert"],
-    "afternoon": ["activity", "lunch", "activity", "dinner", "leisure", "dessert"],
-    "evening":   ["activity", "dinner", "leisure", "dessert", "activity"],
+    "morning":   ["cafe", "scenic", "activity", "lunch", "activity", "dinner", "leisure", "dessert"],
+    "afternoon": ["scenic", "activity", "lunch", "activity", "dinner", "leisure", "dessert"],
+    "evening":   ["scenic", "activity", "dinner", "leisure", "dessert"],
     "night":     ["dinner", "activity", "leisure", "dessert"],
 }
 
@@ -96,9 +96,25 @@ def _est_cost(cand, slot):
 
 # Fun, real activity categories keyed to who's going — so a boys' day gets
 # arcades/karting/paintball/escape rooms, not an art gallery.
+WATER_ACTIVITIES = ("rafting,paddleboarding,surfing,sailing,boatcharters,boattours,jetskis,"
+                    "waterparks,snorkeling,divingcenters,beaches,lakes")
+_WATER_WORDS = ["kayak", "canoe", "paddle", "waterbike", "water bike", "water biking",
+                "jet ski", "jetski", "boat", "sail", "surf", "snorkel", "scuba", "raft",
+                "swim", "beach", "on the water", "water activities", "water sports", "lake"]
+
+
+def wants_water(interests, text=""):
+    s = f"{interests or ''} {text or ''}".lower()
+    return any(w in s for w in _WATER_WORDS)
+
+
 def activity_categories(group_type, vibe, interests):
     it = (interests or "").lower()
     competitive = "arcades,escapegames,gokarts,lasertag,paintball,axethrowing,minigolf,bowling,trampoline,karaoke"
+    # Water first: kayaking, waterbiking, paddleboarding etc. beat every other
+    # routing rule — if they asked to be on the water, put them on the water.
+    if wants_water(it):
+        return WATER_ACTIVITIES
     if any(w in it for w in ["paintball", "arcade", "escape", "kart", "laser", "axe", "bowling",
                               "competitive", "mini golf", "minigolf", "trampoline", "climb", "karaoke"]):
         return competitive
@@ -228,6 +244,13 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
     bad_weather = bool(wx and (wx["rainy"] or wx["cold"]))
     if bad_weather:
         slots = ["cafe" if s == "scenic" else s for s in slots]
+        # the swap can create a second cafe (morning arc) — make it an activity
+        seen_cafe = False
+        for i, s in enumerate(slots):
+            if s == "cafe":
+                if seen_cafe:
+                    slots[i] = "activity"
+                seen_cafe = True
 
     # Surface the hidden gem on the activity if there is one, else the last stop.
     gem_index = slots.index("activity") if "activity" in slots else len(slots) - 1
@@ -386,6 +409,7 @@ def option_sections(time_of_day, vibe, group_type):
     day = time_of_day in ("morning", "afternoon")
     if day:
         secs.append(("cafe", "Coffee & warm-up", "☕", "optional"))
+    secs.append(("scenic", "Scenic & free", "🌇", "optional — beaches, parks, lookouts"))
     secs.append(("activity", "Activity", "🎡", "pick 1–2"))
     if day:
         secs.append(("lunch", "Lunch", "🥗", "pick 1"))
@@ -474,10 +498,14 @@ def _narrate(plan, interests, group_type, time_of_day, dietary, wx=None, events=
              "- Use your own knowledge ONLY for tone, timing, transitions and readability — never for "
              "facts about specific places.\n"
              "Return JSON: {\"intro\": str, \"stops\": [{\"time\": str, \"desc\": str}, ...], \"tip\": str}.\n"
-             "intro = 2-3 sentences about the day/group/vibe — mention NO venue names that aren't in "
-             "the list (it's fine to name the listed ones or none).\n"
+             "intro = 3-4 sentences about the day/group/vibe — set the scene and the arc of the "
+             "night; mention NO venue names that aren't in the list (it's fine to name the listed "
+             "ones or none).\n"
              "stops = one per venue IN ORDER: a realistic clock time (from the start time, allowing "
-             "travel + dwell) and 1-2 vivid sentences about THAT venue only.\n"
+             "travel + dwell) and 2-3 vivid sentences about THAT venue only — what it is, why it "
+             "fits this group and budget, and one concrete thing to do or order there (drawn only "
+             "from its listed categories/price, never invented specifics like dish names you can't "
+             "know). If a stop is free (a park, beach, lookout), say so — free is a feature.\n"
              "tip = one closing line; may reference the listed venues/events by their exact names only.\n"
              "VARY YOUR ENERGY per stop to follow the day's emotional arc: calm, unhurried language "
              "for the early/low-key stops, building excitement and anticipation toward the stop marked "
