@@ -11,6 +11,7 @@ iOS (SwiftUI)  ──HTTP──▶  FastAPI  ──▶  PostgreSQL (PostGIS-read
                                    ├──▶  Redis (leaderboards, cache, rate limit)
                                    ├──▶  Celery workers (geocode, distance, badges, share cards)
                                    └──▶  Object storage (local disk in dev / S3·MinIO in prod)
+                                   
 Geocoding: Nominatim / OpenStreetMap (free, no API key)
 ```
 
