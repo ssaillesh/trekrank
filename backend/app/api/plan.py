@@ -14,7 +14,7 @@ from app.config import settings
 from app.schemas.plan import (
     ChatRequest, ChatResponse, Plan, Option, Section, OptionsResponse, BuildRequest, Event,
 )
-from app.services import llm, yelp
+from app.services import foursquare, llm, yelp
 from app.services import events as events_svc
 from app.services.geocoding import geocode
 from app.services.planner import (
@@ -36,6 +36,8 @@ def debug():
         "llm_test_ok": ok,
         "llm_test_detail": detail,
         "yelp_configured": yelp.available(),
+        "foursquare_configured": foursquare.available(),
+        "ticketmaster_configured": events_svc.available(),
     }
 
 VIBE_LABELS = {

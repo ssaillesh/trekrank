@@ -369,7 +369,7 @@ function appendFoot(buttons){
 }
 
 function renderPlan(plan){
-  appendPlanCard(plan);
+  appendPlanCard({ ...plan, events: [] });   // events come as a question, not a strip
   lastItin = { title: plan.intro || 'Your plan', plan };
   appendFoot([
     { label:'💾 Save', cls:'save-chip', onclick:e=>saveCurrent(e.target) },
@@ -377,6 +377,50 @@ function renderPlan(plan){
     { label:'💵 Cheaper', onclick:()=>send('make it cheaper') },
     { label:'🥂 Fancier', onclick:()=>send('make it fancier') },
   ]);
+  suggestEvents(plan);
+}
+
+/* ---------- event opt-in: suggest what's on nearby, add only on a "yes" ---------- */
+function suggestEvents(plan, idx=0){
+  const evs = plan.events || [];
+  if (idx >= evs.length || idx >= 2) return;         // suggest at most two
+  const ev = evs[idx];
+  const when = evWhen(ev);
+  const price = ev.price_min ? ` (from $${Math.round(ev.price_min)})` : '';
+  addMsg('assistant', esc(`One more thing — ${ev.name}${ev.venue?` at ${ev.venue}`:''}${when?`, ${when}`:''}${price} is on nearby. Want me to add it to your plan?`));
+  const q = document.createElement('div'); q.className = 'quick';
+  const yes = document.createElement('button'); yes.className='chip'; yes.textContent='🎟️ Yes, add it';
+  const no  = document.createElement('button'); no.className='chip'; no.textContent='🙅 No thanks';
+  const done = (took) => {
+    q.remove();
+    if (took){
+      addEventToPlan(plan, ev);
+      addMsg('assistant', esc(`Done — ${ev.name} is in. Here's the updated plan:`));
+      appendPlanCard({ ...plan, events: [] });
+      lastItin = { title: plan.intro || 'Your plan', plan };
+    } else {
+      addMsg('assistant', idx+1 < Math.min(evs.length,2) ? 'No problem.' : "No problem — the plan stays as is.");
+      suggestEvents(plan, idx+1);                    // offer the next one
+    }
+  };
+  yes.onclick = ()=>done(true); no.onclick = ()=>done(false);
+  q.appendChild(yes); q.appendChild(no); thread.appendChild(q); scrollDown();
+}
+
+function addEventToPlan(plan, ev){
+  const cost = Math.round(ev.price_min || 40);
+  plan.stops.push({
+    slot:'event', label:'Live event', icon:'🎟️',
+    name: ev.name, lat: ev.lat, lng: ev.lng,
+    rating: null, price: null,
+    address: ev.venue || null, image: ev.image || null,
+    url: ev.url || null, source: 'ticketmaster',
+    est_cost: cost, categories: [ev.category].filter(Boolean),
+    time: ev.time ? ev.time.slice(0,5) : null,
+    why: `Live ${ev.category ? ev.category.toLowerCase() : 'event'}${evWhen(ev) ? ' · ' + evWhen(ev) : ''} — you said yes, so it's locked in.`,
+  });
+  plan.estimated_cost = (plan.estimated_cost || 0) + cost * Math.max(1, plan.party_size || 1);
+  plan.events = plan.events.filter(e => e !== ev);   // no longer just "nearby" — it's in the plan
 }
 
 function renderTrip(days, title){

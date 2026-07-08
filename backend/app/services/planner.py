@@ -5,7 +5,9 @@ when keyed, falls back to OpenStreetMap. An optional LLM writes the narration.
 """
 import math
 import random
+import re
 
+from app.services import foursquare
 from app.services import yelp
 from app.services.hotspots import fetch_hotspots
 from app.services import llm
@@ -29,6 +31,11 @@ FUN_WEIGHT = 1.3
 # spots a younger crowd wants (Cactus Club-type places with thousands of reviews)
 # over tiny high-rated gems. log10(reviews) so 2000 reviews ≈ 3.3, 80 ≈ 1.9.
 BUZZ_WEIGHT = 0.7
+
+# Foursquare popularity is 0..1 from real foot traffic — the closest thing to a
+# live "trendy right now" signal. Weighted so a genuinely buzzing spot can beat
+# a slightly better-rated sleepy one, without drowning out rating/distance.
+POPULARITY_WEIGHT = 1.5
 
 # "activity" = real things to do (aquarium, arcade, escape room, museum, bowling…).
 # "leisure"  = evening vibes (lounge, hookah, cocktail/live-music, karaoke…).
@@ -146,6 +153,45 @@ def cuisine_term(interests, dietary):
     return None
 
 
+# Interest keywords routed to the slot they belong to, so "rooftop patio and
+# gelato" shapes the drinks stop AND the dessert stop — not just the activity.
+_SLOT_INTEREST_TERMS = {
+    "leisure": ["nightclub", "clubbing", "club", "dance", "dj", "rave", "hookah", "shisha",
+                "rooftop", "live music", "jazz", "speakeasy", "wine bar", "board game",
+                "karaoke", "billiards", "pool hall", "comedy"],
+    "drinks":  ["rooftop", "speakeasy", "wine bar", "cocktail", "craft beer", "brewery", "sake"],
+    "dessert": ["gelato", "ice cream", "boba", "bubble tea", "crepe", "waffle", "churro",
+                "cheesecake", "donut", "bakery", "matcha"],
+    "cafe":    ["matcha", "boba", "bubble tea", "specialty coffee", "brunch"],
+    "scenic":  ["beach", "waterfront", "harbourfront", "boardwalk", "sunset", "lookout",
+                "botanical", "garden", "island", "trail", "picnic"],
+}
+
+
+def interest_term_for(slot_key, interests):
+    it = (interests or "").lower()
+    for w in _SLOT_INTEREST_TERMS.get(slot_key, ()):
+        if w in it:
+            return w
+    return None
+
+
+def _interest_bonus(c, interests):
+    """Ranking boost when a candidate actually matches what the user asked for —
+    by name or category — so stated interests beat generic popularity."""
+    it = (interests or "").lower()
+    if not it:
+        return 0.0
+    hay = (c.get("name") or "").lower() + " " + " ".join(
+        str(x).lower() for x in (c.get("categories") or []))
+    tokens = [t for t in re.split(r"[,;/]| and ", it) if len(t.strip()) >= 3]
+    return 2.5 if any(t.strip() in hay for t in tokens) else 0.0
+
+
+def _norm_name(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
 def _gather(anchor, slot_key, price_pref, radius, dietary, term_override=None, cat_override=None):
     slot = SLOT_SPECS[slot_key]
     term = slot["yelp"].get("term")
@@ -161,6 +207,19 @@ def _gather(anchor, slot_key, price_pref, radius, dietary, term_override=None, c
     cands = yelp.search(anchor[0], anchor[1], term=term,
                         categories=categories,
                         radius=radius, limit=20, sort_by="best_match")
+    # Foursquare: annotate Yelp candidates with real foot-traffic popularity
+    # (matched by name) and add trendy Foursquare-only venues to the pool.
+    if foursquare.available():
+        q = term or (categories or "").split(",")[0] or None
+        fsq = foursquare.search(anchor[0], anchor[1], query=q, radius=radius, limit=15)
+        by_name = {_norm_name(f["name"]): f for f in fsq if f.get("name")}
+        matched = set()
+        for c in cands:
+            f = by_name.get(_norm_name(c.get("name") or ""))
+            if f:
+                c["popularity"] = f.get("popularity")
+                matched.add(_norm_name(c["name"]))
+        cands.extend(f for n, f in by_name.items() if n not in matched)
     if len(cands) < 5:
         for h in fetch_hotspots(slot["osm"], lat=anchor[0], lng=anchor[1], radius=radius):
             cands.append({"source": "osm", "name": h["name"], "lat": h["lat"], "lng": h["lng"],
@@ -170,7 +229,7 @@ def _gather(anchor, slot_key, price_pref, radius, dietary, term_override=None, c
     return cands
 
 
-def _score(c, anchor, penalty, want_gem, fancy=False, apply_fun=False):
+def _score(c, anchor, penalty, want_gem, fancy=False, apply_fun=False, interests=""):
     """Higher is better. Balances rating, closeness, price preference (cheaper for
     value vibes / pricier when they want fancy), a hidden-gem bonus, and — for
     activity/leisure slots — a fun/hype signal that's independent of star rating."""
@@ -178,6 +237,8 @@ def _score(c, anchor, penalty, want_gem, fancy=False, apply_fun=False):
     dist = _haversine_km(anchor[0], anchor[1], c["lat"], c["lng"])
     level = PRICE_LEVEL.get(c.get("price"), 2)
     score = rating * 2.0 - dist * penalty
+    score += _interest_bonus(c, interests)   # what they ASKED for outranks generic hits
+    score += (c.get("popularity") or 0) * POPULARITY_WEIGHT   # Foursquare foot-traffic trendiness
     score += (level - 1) * 0.6 if fancy else -(level - 1) * 0.5   # tier preference
     score += math.log10((c.get("review_count") or 0) + 1) * BUZZ_WEIGHT   # buzz / popularity
     if apply_fun:
@@ -195,6 +256,8 @@ def tag_for(c) -> tuple[str | None, str | None]:
     rating = c.get("rating") or 0
     rc = c.get("review_count") or 0
     fun = experience.fun_factor_for(c.get("categories"))
+    if (c.get("popularity") or 0) >= 0.95:
+        return ("🔥", "Trending now")
     if fun >= 4.0 and rc >= 150:
         return ("🔥", "Buzzing")
     if rating >= 4.7 and rc >= 30:
@@ -206,10 +269,10 @@ def tag_for(c) -> tuple[str | None, str | None]:
     return (None, None)
 
 
-def _pick(cands, used, anchor, penalty, want_gem, vary=False, fancy=False, apply_fun=False):
+def _pick(cands, used, anchor, penalty, want_gem, vary=False, fancy=False, apply_fun=False, interests=""):
     ranked = sorted(
         (c for c in cands if c.get("name") and c["name"].lower() not in used),
-        key=lambda c: _score(c, anchor, penalty, want_gem, fancy, apply_fun), reverse=True)
+        key=lambda c: _score(c, anchor, penalty, want_gem, fancy, apply_fun, interests), reverse=True)
     if not ranked:
         return None
     # On a "try another", pick from the strong top few for genuine variety.
@@ -271,9 +334,12 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
                 term_override = interests          # e.g. "escape room"
         elif slot_key in ("dinner", "lunch") and cz:
             term_override = cz                     # e.g. "korean bbq"
-        elif slot_key == "leisure" and interests and any(
-                w in interests.lower() for w in ["club", "clubbing", "dance", "dj", "rave", "nightclub"]):
-            term_override = "nightclub"            # they explicitly want to go clubbing
+        elif slot_key not in ("dinner", "lunch"):
+            # route each stated interest to the slot it belongs to — hookah/rooftop
+            # shape the leisure stop, gelato the dessert stop, beach the scenic stop.
+            t = interest_term_for(slot_key, interests)
+            if t:
+                term_override = "nightclub" if t in ("clubbing", "club", "dance", "dj", "rave") else t
         # Walk mode: chain each stop near the last for a tight walkable route.
         # City mode: search the whole central-city radius from the centre, so you
         # get the best spots across town (still bounded to the city by `radius`).
@@ -286,10 +352,10 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
         # Fun/hype only matters for what you DO — not for a restaurant or cafe.
         apply_fun = slot_key in ("activity", "leisure")
         cands = _gather(search_from, slot_key, price_pref, r, dietary, term_override, cat_override)
-        pick = _pick(cands, used, search_from, tconf["penalty"], (i == gem_index), vary, fancy, apply_fun)
+        pick = _pick(cands, used, search_from, tconf["penalty"], (i == gem_index), vary, fancy, apply_fun, interests)
         if not pick and r < radius:
             cands = _gather(search_from, slot_key, price_pref, radius, dietary, term_override, cat_override)
-            pick = _pick(cands, used, search_from, tconf["penalty"], (i == gem_index), vary, fancy, apply_fun)
+            pick = _pick(cands, used, search_from, tconf["penalty"], (i == gem_index), vary, fancy, apply_fun, interests)
         if not pick:
             continue
         used.add(pick["name"].lower())
@@ -385,11 +451,15 @@ def gather_options(slot_key, *, lat, lng, vibe=DEFAULT_VIBE, group_type=None,
             term_override = interests
     elif slot_key in ("dinner", "lunch") and cz:
         term_override = cz
+    elif slot_key not in ("dinner", "lunch"):
+        t = interest_term_for(slot_key, interests)
+        if t:
+            term_override = "nightclub" if t in ("clubbing", "club", "dance", "dj", "rave") else t
     cands = _gather((lat, lng), slot_key, price_pref, tconf["radius"], dietary, term_override, cat_override)
     apply_fun = slot_key in ("activity", "leisure")
     fancy = vibe == "extravagant"
     ranked = sorted((c for c in cands if c.get("name")),
-                    key=lambda c: _score(c, (lat, lng), tconf["penalty"], False, fancy, apply_fun),
+                    key=lambda c: _score(c, (lat, lng), tconf["penalty"], False, fancy, apply_fun, interests),
                     reverse=True)
     seen, out = set(), []
     for c in ranked:
