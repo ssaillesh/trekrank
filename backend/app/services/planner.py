@@ -8,6 +8,7 @@ import random
 import re
 
 from app.services import foursquare
+from app.services import geocoding
 from app.services import yelp
 from app.services.hotspots import fetch_hotspots
 from app.services import llm
@@ -208,6 +209,53 @@ def _norm_name(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
+def _name_matches(requested: str, found: str) -> bool:
+    """Loose match between a name the user typed and a venue name from a
+    verified source — normalised containment either way, so "Joe's Pizza"
+    matches "Joes Pizza Kitsilano"."""
+    a, b = _norm_name(requested), _norm_name(found)
+    return bool(a) and bool(b) and (a in b or b in a)
+
+
+# Which slot a verified user-requested venue occupies, inferred from its
+# categories. First match wins; anything unrecognised counts as an activity.
+_REQUEST_SLOT_RULES = [
+    ("cafe", ("coffee", "cafe", "tea house")),
+    ("dessert", ("dessert", "ice cream", "gelato", "bakery", "donut")),
+    ("drinks", ("bar", "pub", "brewer", "cocktail", "lounge", "nightlife",
+                "club", "winery", "hookah", "karaoke")),
+    ("scenic", ("park", "beach", "garden", "landmark", "lookout", "trail")),
+    ("dinner", ("restaurant", "food", "pizza", "sushi", "steak", "bbq",
+                "diner", "bistro", "noodle", "taco")),
+]
+
+
+def _slot_for_categories(categories) -> str:
+    hay = " ".join(str(c).lower() for c in (categories or []))
+    for slot_key, words in _REQUEST_SLOT_RULES:
+        if any(w in hay for w in words):
+            return slot_key
+    return "activity"
+
+
+def verify_requested_venue(name: str, lat: float, lng: float, radius: int = 8000) -> dict | None:
+    """Research a place the user asked for by name against verified sources
+    (Yelp, then Foursquare). Returns the real venue or None — the LLM never
+    gets to decide whether a place exists."""
+    if not (name or "").strip():
+        return None
+    for cands in (yelp.search(lat, lng, term=name, radius=radius, limit=8),
+                  foursquare.search(lat, lng, query=name, radius=radius, limit=8)):
+        for c in cands:
+            if _name_matches(name, c.get("name") or ""):
+                return c
+    # Keyless fallback: OSM/Nominatim, hard-bounded to the area.
+    c = geocoding.find_place(name, lat, lng, radius_km=radius / 1000)
+    if c and _name_matches(name, c.get("name") or ""):
+        return c
+    return None
+
+
 def _gather(anchor, slot_key, price_pref, radius, dietary, term_override=None, cat_override=None):
     slot = SLOT_SPECS[slot_key]
     term = slot["yelp"].get("term")
@@ -309,7 +357,8 @@ def _slots_for(vibe, time_of_day, group_type, length):
 
 def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="any",
                time_of_day=None, group_type=None, dietary="", interests="", avoid="",
-               radius=None, exclude=None, vary=False, target_stops=4):
+               radius=None, exclude=None, vary=False, target_stops=4,
+               requested_venues=None):
     vibe = vibe if vibe in VIBE_PLANS else DEFAULT_VIBE
     price_pref = VIBE_PLANS[vibe]["price"]
     tconf = TRANSPORT.get(transport, TRANSPORT["any"])
@@ -390,6 +439,38 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
             "arousal": experience.arousal_for(pick.get("categories")),
         })
 
+    # Venues the user asked for BY NAME: research each against the same verified
+    # sources the planner trusts (Yelp/Foursquare). Confirmed-real ones join the
+    # plan as first-class stops — so the narrator may name them — and the rest
+    # are reported back as unverified instead of being invented or ignored.
+    unverified = []
+    for req_name in (requested_venues or [])[:3]:
+        if any(_name_matches(req_name, s["name"]) for s in stops):
+            continue                            # planner already picked it
+        pick = verify_requested_venue(req_name, lat, lng, max(radius, 8000))
+        if not pick:
+            unverified.append(req_name)
+            continue
+        if pick["name"].lower() in used:        # e.g. already on an earlier trip day
+            continue
+        used.add(pick["name"].lower())
+        slot_key = _slot_for_categories(pick.get("categories"))
+        slot = SLOT_SPECS[slot_key]
+        stop = {
+            "slot": slot_key, "label": slot["label"], "icon": slot["icon"],
+            "name": pick["name"], "lat": pick["lat"], "lng": pick["lng"],
+            "rating": pick.get("rating"), "price": pick.get("price"),
+            "address": pick.get("address"), "image": pick.get("image"),
+            "url": pick.get("url"), "source": pick.get("source"),
+            "est_cost": _est_cost(pick, slot), "categories": pick.get("categories") or [],
+            "arousal": experience.arousal_for(pick.get("categories")),
+            "requested": True,                  # user asked for it — never trim it
+        }
+        pos = next((i for i, s in enumerate(stops)
+                    if SLOT_ORDER.get(s["slot"], 9) > SLOT_ORDER.get(slot_key, 9)),
+                   len(stops))
+        stops.insert(pos, stop)
+
     def total():
         return sum(s["est_cost"] for s in stops) * max(1, party_size)
 
@@ -398,7 +479,8 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
     # plan keeps its activity + food + leisure shape.
     DROP_ORDER = {"dessert": 0, "cafe": 1, "drinks": 1, "leisure": 1, "scenic": 2, "activity": 3}
     while stops and total() > budget * 1.15 and len(stops) > 2:
-        droppable = [s for s in stops if s["slot"] not in ("dinner", "lunch")]
+        droppable = [s for s in stops
+                     if s["slot"] not in ("dinner", "lunch") and not s.get("requested")]
         if not droppable:
             break
         stops.remove(min(droppable, key=lambda s: DROP_ORDER.get(s["slot"], 5)))
@@ -421,6 +503,8 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
         "walk_km": round(spread, 1), "stops": stops,
         "weather": (wx["summary"] if wx else None),
         "events": events,
+        # names the user asked for that no verified source could confirm nearby
+        "unverified_requests": unverified,
     }
     _narrate(plan, interests, group_type, time_of_day, dietary, wx, events, avoid)
     return plan
@@ -555,6 +639,8 @@ def _narrate(plan, interests, group_type, time_of_day, dietary, wx=None, events=
             + (f" ({s['price']}, {s['rating']}★)" if s.get('rating') else "")
             + (f" [{', '.join(s['categories'][:2])}]" if s.get('categories') else "")
             + f"  ~${s['est_cost']}/pp"
+            + (" [USER-REQUESTED — they asked for this place by name and it's "
+               "verified; acknowledge naturally that it made the plan]" if s.get("requested") else "")
             + (" [PEAK — emotional high point of the day; write it with the most "
                "energy and anticipation]" if i == peak_idx else "")
             for i, s in enumerate(stops))
@@ -583,6 +669,10 @@ def _narrate(plan, interests, group_type, time_of_day, dietary, wx=None, events=
              "- Do NOT name any venue, business, or event that is not in the provided lists. Not in "
              "the intro, not in a description, not in the tip. If you're unsure a name was given to "
              "you, do not use it.\n"
+             "- The Context line may quote the user mentioning or requesting places by name. Those "
+             "are NOT venues given to you — the VENUES list is the ONLY source of venue names. If "
+             "the user asks for a place that is not in VENUES, silently ignore that request: do not "
+             "name it, do not add a stop for it, do not mention that it was skipped.\n"
              "- Do NOT modify names, ratings, categories, or prices.\n"
              "- Only reference an event if it appears in the EVENTS line, using its exact name/time.\n"
              "- Use your own knowledge ONLY for tone, timing, transitions and readability — never for "

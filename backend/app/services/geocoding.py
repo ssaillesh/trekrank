@@ -4,6 +4,7 @@ Nominatim's usage policy asks for <= 1 request/second and a descriptive User-Age
 Results are cached in Redis for 30 days so repeated cities don't hit the API.
 """
 import json
+import math
 import time
 
 import httpx
@@ -96,6 +97,48 @@ def geocode_place(name: str) -> tuple[float, float] | None:
     lat, lng = float(results[0]["lat"]), float(results[0]["lon"])
     redis_client.setex(key, settings.geocode_cache_ttl, json.dumps({"lat": lat, "lng": lng}))
     return lat, lng
+
+
+def find_place(name: str, lat: float, lng: float, radius_km: float = 10.0) -> dict | None:
+    """Look up a specific named venue near a point (OSM/Nominatim, keyless).
+    Returns a normalised candidate dict like yelp/foursquare search results, or
+    None when no such place exists nearby — used to verify user-requested venues
+    when no paid source is configured."""
+    if not name or len(name.strip()) < 3:
+        return None
+    key = f"geovenue:{name.strip().lower()}:{round(lat,2)}:{round(lng,2)}"
+    cached = redis_client.get(key)
+    if cached is not None:
+        return json.loads(cached)
+
+    # viewbox bounds the search to ~radius_km around the point; bounded=1 makes
+    # it a hard filter, so a same-named place in another city can't match.
+    dlat = radius_km / 111.0
+    dlng = radius_km / (111.0 * max(0.1, math.cos(math.radians(lat))))
+    params = {"q": name, "format": "json", "limit": 3, "addressdetails": 0,
+              "bounded": 1,
+              "viewbox": f"{lng - dlng},{lat + dlat},{lng + dlng},{lat - dlat}"}
+    try:
+        _throttle()
+        resp = httpx.get(settings.nominatim_url, params=params,
+                         headers={"User-Agent": settings.geocode_user_agent}, timeout=15.0)
+        resp.raise_for_status()
+        results = resp.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+    out = None
+    for r in results or []:
+        found = (r.get("display_name") or "").split(",")[0]
+        out = {
+            "source": "osm", "name": found or name.strip(),
+            "lat": float(r["lat"]), "lng": float(r["lon"]),
+            "rating": None, "review_count": None, "price": None,
+            "categories": [t for t in [r.get("type", "").replace("_", " ")] if t],
+            "address": r.get("display_name"), "image": None, "url": None,
+        }
+        break
+    redis_client.setex(key, settings.geocode_cache_ttl, json.dumps(out))
+    return out
 
 
 def _reverse_url() -> str:

@@ -71,6 +71,10 @@ Your job: read the whole conversation and output ONLY JSON (no prose) with these
   avoid: short string of things they explicitly do NOT want (e.g. "parks, museums, clubbing"), or "".
     Treat "no X", "not X", "don't want X", "skip X", "anything but X" as avoid — and NEVER
     leave a rejected thing in interests.
+  requested_venues: array of specific venues/places the user asks to include by NAME —
+    proper nouns only (e.g. "end the night at Celeste's" → ["Celeste's"], "can we hit
+    The Rec Room" → ["The Rec Room"]). Generic types ("a rooftop bar", "korean bbq")
+    belong in interests, NOT here. [] if none.
   ready: true ONLY if budget AND vibe are known
   question: if not ready, ONE concise concierge-style question to get the missing essentials
   quick_replies: array of 2-5 short tappable answers for that question
@@ -266,9 +270,10 @@ def _clean(prefs):
     """Drop null/empty so build_plan uses its own defaults."""
     keep = {}
     for k in ("budget", "vibe", "party_size", "days", "time_of_day",
-              "transport", "group_type", "dietary", "interests", "avoid"):
+              "transport", "group_type", "dietary", "interests", "avoid",
+              "requested_venues"):
         v = prefs.get(k)
-        if v not in (None, "", "null"):
+        if v not in (None, "", "null") and v != []:
             keep[k] = v
     return keep
 
@@ -400,7 +405,14 @@ def chat(req: ChatRequest):
     if not plan_dict["stops"]:
         return ChatResponse(type="message", message="I couldn't source enough open spots nearby for that. A larger budget or different vibe?")
     plan = Plan(**plan_dict)
-    return ChatResponse(type="itinerary", message=plan.intro or "Your plan:", plan=plan)
+    msg = plan.intro or "Your plan:"
+    # Be honest about requested places we couldn't confirm exist nearby —
+    # better than silently dropping them (or worse, inventing them).
+    missing = plan_dict.get("unverified_requests") or []
+    if missing:
+        msg += (f" (I looked for {', '.join(missing)} but couldn't verify "
+                f"{'it' if len(missing) == 1 else 'them'} nearby, so it's not included.)")
+    return ChatResponse(type="itinerary", message=msg, plan=plan)
 
 
 @router.post("/options", response_model=OptionsResponse)
