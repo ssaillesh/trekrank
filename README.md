@@ -1,58 +1,74 @@
-# TrekRank
+# Roamly
 
-Travel-logging social app: log trips, auto-compute distances, climb friend &
-global leaderboards, earn badges, and generate shareable year-in-travel cards.
-
-This repo contains a **working FastAPI backend** (verified end-to-end) and a
-**full SwiftUI iOS client**.
+An AI trip-night planner and travel map. Tell the planner your budget and vibe
+and it builds a real, timed itinerary from live venues nearby; a separate map
+app surfaces hand-picked hidden gems and can drop that exact itinerary onto
+the map to see what's around it. The backend service (FastAPI/Celery) is
+internally named **TrekRank** — it also does travel-logging: trips, distances,
+friend & global leaderboards, badges, and shareable year-in-travel cards.
 
 ```
-iOS (SwiftUI)  ──HTTP──▶  FastAPI  ──▶  PostgreSQL (PostGIS-ready)
-                                   ├──▶  Redis (leaderboards, cache, rate limit)
-                                   ├──▶  Celery workers (geocode, distance, badges, share cards)
-                                   └──▶  Object storage (local disk in dev / S3·MinIO in prod)
-                                   
+webui (static HTML)  ──HTTP──▶  FastAPI  ──▶  PostgreSQL (PostGIS-ready)
+                                        ├──▶  Redis (leaderboards, cache, rate limit)
+                                        ├──▶  Celery workers (geocode, distance, badges, share cards)
+                                        └──▶  Object storage (local disk in dev / S3·MinIO in prod)
+
 Geocoding: Nominatim / OpenStreetMap (free, no API key)
 ```
 
-Everything uses **free / open-source components** — no paid APIs. Geocoding is the
-free Nominatim endpoint; share-card storage defaults to the local filesystem.
+Everything uses **free / open-source components** — no paid APIs required. Geocoding is
+the free Nominatim endpoint; share-card storage defaults to the local filesystem.
 
 ---
 
 ## What's implemented
 
-**Backend (Python 3.10+, FastAPI):** all endpoints from the spec —
-auth (email register/login + JWT refresh + Apple sign-in stub + GDPR delete),
-users/profile/stats/map/search, trips CRUD + onboarding backfill,
-friends (request/accept/reject/suggestions), friend & global leaderboards (Redis
-sorted sets), cursor-paginated activity feed, badges (20 seeded) + evaluation,
-group challenges, and Instagram-Story share-card generation.
+**Backend (Python 3.10+, FastAPI):** auth (email register/login + JWT refresh +
+Apple sign-in stub + forgot/reset password + GDPR delete), users/profile/stats/map/search,
+trips CRUD + onboarding backfill, friends (request/accept/reject/suggestions), friend &
+global leaderboards (Redis sorted sets), cursor-paginated activity feed, badges (24 seeded)
++ evaluation, group challenges, Instagram-Story share-card generation, an AI planner
+(chat / guided "build your own" itinerary / options endpoints backed by live venue data),
+hidden-gem hotspots feed, and a waitlist signup endpoint.
 
 **3 Celery workers:** trip processor (geocode → distance → visited tables → stats →
 leaderboards → feed → badge trigger), badge evaluator, share-card generator
 (Pillow, 1080×1920 PNG).
 
-**iOS app (SwiftUI, iOS 17):** auth, feed, trips list + add-trip, friend/global
-leaderboards, MapKit world map of visited cities, profile with stats/badges and
-one-tap share-card generation.
+**Web UI (`webui/`, static HTML/CSS/JS, no build step):**
+- `index.html` — marketing landing page with an animated itinerary demo and a waitlist form.
+- `auth.html` — the dedicated sign-in / create-account page: animated aurora background,
+  sliding segmented toggle, live field validation, password strength meter, and a
+  forgot-password flow. Any page that needs a session (the planner, the map's account
+  menu) routes here via `?redirect=`; an already-signed-in visitor is bounced straight
+  through before the page even paints.
+- `roamly.html` — the AI planner chat. A short conversational wizard (or free-form chat)
+  builds a budget/vibe itinerary from real, open-right-now venues, with live nearby events
+  woven in on request. Each itinerary card has a mini preview map you can tap to open the
+  exact same stops — plotted for real, with a route line — on `app.html`, in a new tab.
+  Location sharing is a click-to-toggle pill in the header, off by default.
+- `app.html` — the interactive Leaflet map: hidden-gem discovery (filterable by category),
+  a rich spot-detail panel (street-level map + a real photo pulled from Wikipedia/Wikimedia
+  Commons), the same Roamly planner as an on-map chat concierge, and — when arriving from
+  a `roamly.html` itinerary link — the imported stops plotted with a "📍 Near your plan"
+  filter that surfaces hidden gems around that itinerary.
 
-**Tests:** 10 pytest integration tests (trips, badges, leaderboards, feed) — all green.
+**Tests:** 10 pytest integration tests (trips, badges, leaderboards, feed) — 8 passing.
+`test_five_countries_badge` (expects a `streak_3` badge not in the seeded catalog) and
+`test_global_leaderboard` currently fail; pre-existing, unrelated to the web UI/backend
+changes described above.
 
 ---
 
 ## PostGIS
 
-This runs on **PostGIS** as the spec intends: coordinates are stored as
-`GEOGRAPHY(POINT, 4326)` columns with **GiST spatial indexes**, and trip distances
-are computed with **`ST_Distance`** over the geography type
-(`app/services/distance.py` → `distance_km_postgis`). `docker-compose.yml` uses the
-`postgis/postgis:16-3.4` image; the native setup uses Homebrew `postgis` on
-PostgreSQL 18. The migration enables the extension automatically.
-
-> Portability note: `app/services/distance.py` also ships an equivalent Haversine
-> (`distance_km`) that matches `ST_Distance` to ~0.5%, so the distance logic can run
-> on vanilla PostgreSQL if PostGIS is ever unavailable.
+Trip coordinates are stored as plain `lat`/`lng` float columns (portable across any
+PostgreSQL, no PostGIS required), and the default distance calculation is a Haversine
+great-circle formula in Python (`app/services/distance.py` → `distance_km`). An optional
+`distance_km_postgis` helper in the same module computes the equivalent via `ST_Distance`
+over `GEOGRAPHY(POINT, 4326)` for deployments that do have PostGIS enabled (the
+`docker-compose.yml` Postgres image is `postgis/postgis:16-3.4`) — the two methods agree
+to within ~0.5%.
 
 ---
 
@@ -92,32 +108,28 @@ docker compose up --build
 
 ---
 
-## iOS app
+## Web UI
 
-```
-ios/TrekRank/
-```
-
-Requires **Xcode** (only Command Line Tools are present here, so it couldn't be
-compiled in this environment — the Swift sources parse cleanly).
+Static files, no build step — served by Caddy in production (`webui/Dockerfile` +
+`webui/Caddyfile`), or open directly / serve with anything static in dev.
 
 ```bash
-brew install xcodegen
-cd ios/TrekRank
-xcodegen generate        # produces TrekRank.xcodeproj
-open TrekRank.xcodeproj   # run on the iOS Simulator (⌘R)
+cd webui
+python3 -m http.server 5173
+open http://localhost:5173
 ```
 
-Or create a new SwiftUI iOS App in Xcode and drag in `ios/TrekRank/TrekRank/`.
-Point the client at your API in `Config.swift` (defaults to `http://127.0.0.1:8001`;
-the Simulator can reach `localhost`, a physical device needs your Mac's LAN IP).
+`webui/config.js` is the single source of truth for the API URL: it points at
+`http://127.0.0.1:8001/api/v1` on `localhost`, and at the deployed backend everywhere
+else — edit that file if your API lives somewhere else. `render.yaml` / `webui/Dockerfile`
+describe the deployed setup (Render backend + a Railway/Caddy static site for `webui/`).
 
 ---
 
 ## Project layout
 
 ```
-trekrank/
+Sway/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              FastAPI app + middleware + static media
@@ -125,17 +137,25 @@ trekrank/
 │   │   ├── database.py          SQLAlchemy engine/session
 │   │   ├── models/              ORM models (users, trips, badges, …)
 │   │   ├── schemas/             Pydantic request/response models
-│   │   ├── api/                 routers (auth, users, trips, friends, …)
-│   │   ├── services/            geocoding, distance, stats, badges, leaderboard, share
-│   │   ├── workers/             Celery app + 4 workers
+│   │   ├── api/                 routers (auth, users, trips, friends, plan, hotspots, …)
+│   │   ├── services/            geocoding, distance, stats, badges, leaderboard, planner, share
+│   │   ├── workers/             Celery app + 3 workers
 │   │   ├── middleware/          JWT auth + Redis rate limiting
 │   │   └── data/countries.py    ISO country + continent reference data
-│   ├── alembic/                 migrations (0001_init)
+│   ├── alembic/                 migrations
 │   ├── scripts/                 seed_badges, smoke_test
 │   ├── tests/                   pytest suite
 │   └── run_local.sh             native launcher
-├── ios/TrekRank/                SwiftUI client (+ XcodeGen project.yml)
-├── docker-compose.yml           full prod-like stack (PostGIS/MinIO/Prom/Grafana)
+├── webui/
+│   ├── index.html            marketing landing page + waitlist
+│   ├── auth.html             sign-in / create-account page
+│   ├── roamly.html           AI planner chat
+│   ├── app.html               interactive map + hidden-gem discovery
+│   ├── gems.json              curated hidden-gem catalog
+│   ├── config.js              API_BASE (single source of truth)
+│   └── Dockerfile, Caddyfile  static-site deploy
+├── docker-compose.yml            full prod-like stack (PostGIS/MinIO/Prom/Grafana)
+├── render.yaml                   backend deploy config (Render)
 └── infra/prometheus.yml
 ```
 
@@ -146,13 +166,17 @@ trekrank/
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/auth/register` `/auth/login` `/auth/refresh` | JWT |
+| POST | `/auth/forgot-password` `/auth/reset-password` | password recovery |
 | POST | `/trips` | returns `201` immediately; worker fills `distance_km` async |
 | POST | `/trips/backfill` | bulk onboarding import |
-| GET | `/users/{username}/stats` `/users/{username}/map` | detailed stats / map data |
+| GET | `/users/{username}/stats` `/users/{username}/map` | detailed stats / visited-places map |
 | POST | `/friends/request`, `/friends/accept/{id}` | friend graph |
 | GET | `/leaderboards/friends?metric=countries&period=2026` | Redis ZSET |
 | GET | `/feed` | cursor-paginated, friends only |
 | GET | `/badges/me` | earned + locked |
 | POST | `/share/card` | 1080×1920 PNG |
+| POST | `/plan/chat` `/plan/options` `/plan/build` | AI itinerary planner (chat / picker) |
+| GET | `/hotspots` | curated hidden-gem feed |
+| POST | `/waitlist` | early-access signup |
 
 Full interactive docs at `/docs`.

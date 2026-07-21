@@ -27,7 +27,7 @@ app.add_middleware(
 )
 app.add_middleware(RateLimitMiddleware)
 
-# Serve locally-stored media (photos, share cards) when STORAGE_BACKEND=local.
+# Serve locally-stored media (share cards) when STORAGE_BACKEND=local.
 if settings.storage_backend == "local":
     os.makedirs(settings.local_storage_dir, exist_ok=True)
     app.mount("/media", StaticFiles(directory=settings.local_storage_dir), name="media")

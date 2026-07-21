@@ -151,6 +151,21 @@
   .gem .meta .cat{display:inline-block; margin-top:5px; font-size:10px; font-weight:800; letter-spacing:.05em;
     text-transform:uppercase; color:var(--gem); background:rgba(255,143,180,.12); padding:3px 8px; border-radius:999px;}
 
+  /* ---------- itinerary imported from Roamly chat ---------- */
+  .itin-pin{width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:13px; color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border:2px solid #fff; box-shadow:0 3px 10px rgba(0,0,0,.5); transition:transform .15s var(--ease);}
+  .itin-pin:hover{transform:scale(1.15);}
+  .itin-banner{display:flex; align-items:flex-start; gap:10px; margin:2px 0 14px; padding:12px 14px;
+    border-radius:14px; background:linear-gradient(140deg,rgba(255,90,95,.14),rgba(124,92,255,.14));
+    border:1px solid var(--card-brd);}
+  .itin-banner .ico{font-size:17px; flex:0 0 auto;}
+  .itin-banner .txt{flex:1; min-width:0;}
+  .itin-banner b{display:block; font-size:13px; font-weight:800; line-height:1.3;}
+  .itin-banner span{font-size:11.5px; color:var(--muted2);}
+  .itin-banner .x{flex:0 0 auto; cursor:pointer; color:var(--muted2); font-size:16px; padding:2px;}
+  .itin-banner .x:hover{color:var(--rose);}
+
   /* ---------- spot detail — docked side panel (not a popup) ---------- */
   .spot-panel{position:fixed; top:78px; right:20px; z-index:18; width:370px; max-height:calc(100vh - 100px);
     transform:translateX(420px); opacity:0; transition:transform .4s cubic-bezier(.2,.8,.2,1), opacity .3s; pointer-events:none;}
@@ -317,6 +332,11 @@
   <div class="panel" id="panelDiscover">
     <div class="head"><h2>Discover</h2><p>Hand-picked hidden gems & experiences. Tap one to fly there.</p></div>
     <div class="body">
+      <div class="itin-banner hidden" id="itinBanner">
+        <span class="ico">🧭</span>
+        <div class="txt"><b id="itinBannerTitle">Your planned night</b><span>Showing spots near this plan</span></div>
+        <span class="x" id="itinBannerClose" title="Clear plan">×</span>
+      </div>
       <div class="filters" id="filters"></div>
       <div id="gemList"></div>
     </div>
@@ -428,11 +448,28 @@ async function loadGems(){
   renderOverlay();
 }
 
+function haversineKm(a, b){
+  const R=6371, toR=d=>d*Math.PI/180;
+  const dLat=toR(b.lat-a.lat), dLng=toR(b.lng-a.lng);
+  const s=Math.sin(dLat/2)**2 + Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function fmtKm(km){
+  if (km==null || km===Infinity) return '';
+  return km<1 ? '<1 km away' : (km<1000 ? `${Math.round(km)} km away` : `${(km/1000).toFixed(1)}k km away`);
+}
+// Distance from a gem to the center of the itinerary imported from the planner (if any).
+function distToItin(gem){
+  if (!itinCenter) return Infinity;
+  return haversineKm(gem, itinCenter);
+}
+
 function buildFilters(){
   const cats = ['All', ...Array.from(new Set(gems.map(g=>g.category)))];
-  if (!cats.includes(activeFilter)) activeFilter = 'All';
+  if (itinCenter) cats.unshift('Near your plan');
+  if (!cats.includes(activeFilter)) activeFilter = itinCenter ? 'Near your plan' : 'All';
   $('filters').innerHTML = cats.map(c =>
-    `<button class="${c===activeFilter?'active':''}" data-cat="${c}">${c}</button>`).join('');
+    `<button class="${c===activeFilter?'active':''}" data-cat="${c}">${c==='Near your plan'?'📍 Near your plan':c}</button>`).join('');
   $('filters').querySelectorAll('button').forEach(b => b.onclick = () => {
     activeFilter = b.dataset.cat;
     buildFilters(); renderGems(); syncGemMarkers();
@@ -440,18 +477,23 @@ function buildFilters(){
 }
 
 function currentList(){
+  if (activeFilter==='Near your plan' && itinCenter)
+    return [...gems].sort((a,b)=>distToItin(a)-distToItin(b)).slice(0,12);
   if (activeFilter==='All') return gems;
   return gems.filter(g=>g.category===activeFilter);
 }
 function syncGemMarkers(){ renderOverlay(); }
 
 function renderGems(){
+  const near = activeFilter==='Near your plan';
   const list = currentList();
   $('gemList').innerHTML = list.map((g,i) => {
+    const dist = near ? fmtKm(distToItin(g)) : '';
     return `<div class="gem" data-i="${i}">
       <div class="pin">${CAT_ICON[g.category]||'✦'}</div>
       <div class="meta"><b>${escapeHtml(g.name)}</b><span class="loc">${escapeHtml(g.country)}</span>
-        <span class="cat">${escapeHtml(g.category)}</span></div>
+        <span class="cat">${escapeHtml(g.category)}</span>
+        ${dist?`<span class="cat" style="color:var(--accent);background:rgba(124,92,255,.12)">📍 ${dist}</span>`:''}</div>
     </div>`;
   }).join('');
   $('gemList').querySelectorAll('.gem').forEach(el => el.onclick = () => openGem(list[+el.dataset.i]));
@@ -676,6 +718,70 @@ function focusLocation(lat, lng){
   ensureMainMap();
   mainMap.flyTo([lat, lng], CITY_ZOOM, { duration:0.8 });
 }
+
+/* ===================== ITINERARY (imported from the Roamly planner) ===================== */
+// ?itin=<json> — dropped from a "🗺️ Open on map" tap on a planner itinerary card
+// (roamly.html). Plots the exact stops here and surfaces nearby hidden gems.
+let itinStops = [], itinCenter = null, itinTitle = '', itinLayer = null;
+
+function parseItinParam(){
+  const raw = new URLSearchParams(location.search).get('itin');
+  if (!raw) return;
+  try{
+    const data = JSON.parse(raw);
+    const stops = Array.isArray(data.stops) ? data.stops : [];
+    itinStops = stops.filter(s => s && typeof s.lat === 'number' && typeof s.lng === 'number'
+      && s.lat >= -90 && s.lat <= 90 && s.lng >= -180 && s.lng <= 180);
+    itinTitle = String(data.title || 'Your planned night').slice(0, 120);
+  }catch(e){ itinStops = []; }
+}
+
+function renderItinerary(){
+  if (!mainMap || !itinStops.length) return;
+  if (itinLayer) itinLayer.remove();
+  itinLayer = L.layerGroup().addTo(mainMap);
+  itinStops.forEach((s, i) => {
+    const icon = L.divIcon({ className:'', iconSize:[28,28], iconAnchor:[14,14],
+      html:`<div class="itin-pin">${i+1}</div>` });
+    L.marker([s.lat, s.lng], { icon }).addTo(itinLayer).on('click', () => openItinStop(s, i));
+  });
+  const pts = itinStops.map(s => [s.lat, s.lng]);
+  if (pts.length >= 2){
+    L.polyline(pts, { color:'#7c5cff', weight:3, opacity:.65, dashArray:'6 6' }).addTo(itinLayer);
+  }
+  itinCenter = {
+    lat: itinStops.reduce((a,s)=>a+s.lat,0) / itinStops.length,
+    lng: itinStops.reduce((a,s)=>a+s.lng,0) / itinStops.length,
+  };
+  mainMap.fitBounds(L.latLngBounds(pts).pad(0.3));
+
+  $('itinBannerTitle').textContent = itinTitle;
+  $('itinBanner').classList.remove('hidden');
+}
+
+// A stop from an imported itinerary — reuses the spot-detail panel (street map +
+// a real photo of the place) so it reads exactly like a hidden-gem lookup.
+function openItinStop(s, i){
+  focusLocation(s.lat, s.lng);
+  openSpot({
+    name: s.name, lat: s.lat, lng: s.lng,
+    cat: `Stop ${i+1}${s.time ? ' · ' + s.time : ''}`, catColor: 'var(--accent2)',
+    sub: s.label || '',
+    blurb: itinTitle ? `Part of your planned night: ${itinTitle}` : '',
+    wikiTitle: s.name, needStreet: true,
+  });
+}
+
+function clearItinerary(){
+  itinStops = []; itinCenter = null; itinTitle = '';
+  if (itinLayer){ itinLayer.remove(); itinLayer = null; }
+  $('itinBanner').classList.add('hidden');
+  if (activeFilter === 'Near your plan') activeFilter = 'All';
+  buildFilters(); renderGems();
+  const url = new URL(location.href); url.searchParams.delete('itin');
+  history.replaceState(null, '', url);
+}
+$('itinBannerClose').onclick = clearItinerary;
 
 window.setMainBasemap = setMainBasemap; window.recenterMe = recenterMe; window.mapZoom = mapZoom;
 
@@ -913,11 +1019,13 @@ window.addEventListener('load', async () => {
   // ?signin=1 (e.g. from the planner page) jumps straight to the sign-in modal.
   if (new URLSearchParams(location.search).get('signin') && !store.token) openUpload();
   localStorage.removeItem('trek_home');  // stale key from the removed home-location feature
+  parseItinParam();  // ?itin=<json> — a plan opened from the Roamly chat
   ensureMainMap();   // the map is the one and only view
+  renderItinerary();
   refreshChip();
-  await loadGems();
+  await loadGems();  // buildFilters() picks up itinCenter and defaults to "Near your plan"
   renderMapMarkers();
-  locateUser();      // centre on the user's current location, zoomed out
+  if (!itinCenter) locateUser();  // an imported plan already framed the view — don't override it
 });
 </script>
 </body>
