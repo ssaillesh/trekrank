@@ -24,7 +24,7 @@ def meta():
 
 @router.get("", response_model=HotspotFeed)
 def get_hotspots(
-    category: str = Query(..., description="food | activities | party | nature | history"),
+    category: str = Query(..., description="food | activities | party | nature | history | shops"),
     city: str | None = Query(None, description="City key, e.g. 'toronto'"),
     lat: float | None = Query(None, description="Latitude for an exact-location search"),
     lng: float | None = Query(None, description="Longitude for an exact-location search"),

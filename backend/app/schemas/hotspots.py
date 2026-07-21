@@ -5,7 +5,7 @@ class Hotspot(BaseModel):
     name: str
     lat: float
     lng: float
-    category: str           # party | nature | history
+    category: str           # food | activities | party | nature | history | shops
     subtype: str | None = None
     address: str | None = None
     website: str | None = None

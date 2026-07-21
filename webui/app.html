@@ -209,13 +209,19 @@
   .tip .tag.exif{color:var(--accent);} .tip .tag.manual{color:var(--gold);} .tip .tag.gem{color:var(--gem);}
   .tip .cap{color:var(--text); margin-top:3px;} .tip .when{color:var(--muted2); margin-top:2px;}
 
-  /* ---------- gem marker on globe ---------- */
-  .gem-marker{cursor:pointer; color:var(--gem); font-size:15px; line-height:1; transform:translate(-50%,-50%);
-    text-shadow:0 0 10px rgba(255,143,180,.8); transition:transform .15s, font-size .15s; user-select:none;}
-  .gem-marker:hover{font-size:22px; color:#ffd9e6;}
-  .hs-marker{cursor:pointer; font-size:14px; line-height:1; transform:translate(-50%,-50%);
-    transition:transform .15s, font-size .15s; user-select:none; filter:drop-shadow(0 0 6px rgba(0,0,0,.6));}
-  .hs-marker:hover{font-size:20px;}
+  /* ---------- live nearby-spot marker (shops, food, nightlife, …) ---------- */
+  .hs-marker{width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:13px; cursor:pointer; background:rgba(20,20,26,.92); border:1.5px solid rgba(255,255,255,.5);
+    box-shadow:0 3px 10px rgba(0,0,0,.5); transition:transform .15s var(--ease);}
+  .hs-marker:hover{transform:scale(1.2);}
+
+  /* ---------- live-spots section (Discover panel) ---------- */
+  .live-head{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:2px 0 9px;}
+  .live-head b{font-size:13px; font-weight:800;}
+  .live-status{font-size:11px; color:var(--muted2); text-align:right;}
+  .live-note{font-size:11.5px; color:var(--muted2); margin:8px 0 16px; line-height:1.5;}
+  .section-lbl{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted2);
+    margin:18px 0 9px;}
 
   /* ---------- modal ---------- */
   .modal-bg{position:fixed; inset:0; z-index:40; background:rgba(8,8,12,.72); backdrop-filter:blur(8px);
@@ -330,13 +336,19 @@
 
   <!-- SIDE PANEL: DISCOVER -->
   <div class="panel" id="panelDiscover">
-    <div class="head"><h2>Discover</h2><p>Hand-picked hidden gems & experiences. Tap one to fly there.</p></div>
+    <div class="head"><h2>Discover</h2><p>Hand-picked hidden gems, plus everything nearby.</p></div>
     <div class="body">
       <div class="itin-banner hidden" id="itinBanner">
         <span class="ico">🧭</span>
         <div class="txt"><b id="itinBannerTitle">Your planned night</b><span>Showing spots near this plan</span></div>
         <span class="x" id="itinBannerClose" title="Clear plan">×</span>
       </div>
+
+      <div class="live-head"><b>🧭 Nearby, live</b><span class="live-status" id="liveStatus"></span></div>
+      <div class="filters" id="liveChips"></div>
+      <div class="live-note">Pulled live from OpenStreetMap — pick a category, then pan or zoom in on the map.</div>
+
+      <div class="section-lbl">✦ Curated picks</div>
       <div class="filters" id="filters"></div>
       <div id="gemList"></div>
     </div>
@@ -693,6 +705,8 @@ function ensureMainMap(){
       });
     },
   }).addTo(mainMap);
+  // Live "nearby spots" layer re-queries as the user pans/zooms (debounced).
+  mainMap.on('moveend zoomend', () => scheduleLiveFetch());
 }
 function setMainBasemap(which){
   ensureMainMap();
@@ -782,6 +796,111 @@ function clearItinerary(){
   history.replaceState(null, '', url);
 }
 $('itinBannerClose').onclick = clearItinerary;
+
+/* ===================== LIVE NEARBY SPOTS (shops, food, nightlife, …) ===================== */
+// Free, key-less POI layer via the backend's /hotspots endpoint (OpenStreetMap
+// Overpass under the hood). Off by default; turns on per-category via the chip
+// row, then re-queries the current viewport as the user pans/zooms.
+const MIN_LIVE_ZOOM = 13;   // below this the viewport is too wide for a useful/fast query
+let liveMeta = { categories: [] };
+let liveCats = new Set();
+let hotspotLayer = null;
+let hsFetchTimer = null;
+let hsReqSeq = 0;
+
+async function loadHotspotMeta(){
+  try{
+    liveMeta = await fetch(`${API_BASE}/hotspots/meta`).then(r => r.json());
+  }catch(e){ liveMeta = { categories: [] }; }
+  renderLiveChips();
+}
+
+function renderLiveChips(){
+  $('liveChips').innerHTML = liveMeta.categories.map(c =>
+    `<button class="${liveCats.has(c.key)?'active':''}" data-cat="${c.key}">${c.icon} ${escapeHtml(c.label)}</button>`
+  ).join('');
+  $('liveChips').querySelectorAll('button').forEach(b => b.onclick = () => {
+    const k = b.dataset.cat;
+    liveCats.has(k) ? liveCats.delete(k) : liveCats.add(k);
+    renderLiveChips();
+    scheduleLiveFetch(0);
+  });
+}
+
+function scheduleLiveFetch(delay = 550){
+  clearTimeout(hsFetchTimer);
+  hsFetchTimer = setTimeout(fetchLiveSpots, delay);
+}
+
+function ensureHotspotLayer(){
+  if (!hotspotLayer){
+    hotspotLayer = L.markerClusterGroup({
+      showCoverageOnHover: false, maxClusterRadius: 45, disableClusteringAtZoom: 17,
+    }).addTo(mainMap);
+  }
+  return hotspotLayer;
+}
+
+async function fetchLiveSpots(){
+  if (!mainMap) return;
+  if (!liveCats.size){
+    if (hotspotLayer) hotspotLayer.clearLayers();
+    $('liveStatus').textContent = '';
+    return;
+  }
+  const zoom = mainMap.getZoom();
+  if (zoom < MIN_LIVE_ZOOM){
+    if (hotspotLayer) hotspotLayer.clearLayers();
+    $('liveStatus').textContent = 'Zoom in to see nearby spots';
+    return;
+  }
+  const center = mainMap.getCenter();
+  const radius = Math.max(500, Math.min(8000, Math.round(center.distanceTo(mainMap.getBounds().getNorthEast()))));
+  $('liveStatus').textContent = 'Loading…';
+  const reqId = ++hsReqSeq;
+  try{
+    const batches = await Promise.all([...liveCats].map(cat =>
+      fetch(`${API_BASE}/hotspots?category=${encodeURIComponent(cat)}&lat=${center.lat}&lng=${center.lng}&radius=${radius}`)
+        .then(r => r.json()).catch(() => ({ hotspots: [] }))
+    ));
+    if (reqId !== hsReqSeq) return;   // a newer viewport superseded this request
+    renderHotspots(batches.flatMap(b => b.hotspots || []));
+  }catch(e){
+    if (reqId === hsReqSeq) $('liveStatus').textContent = 'Could not load nearby spots.';
+  }
+}
+
+function renderHotspots(list){
+  ensureHotspotLayer().clearLayers();
+  list.forEach(h => {
+    const cat = liveMeta.categories.find(c => c.key === h.category);
+    const icon = L.divIcon({ className:'', iconSize:[26,26], iconAnchor:[13,13],
+      html:`<div class="hs-marker" title="${escapeHtml(h.name)}">${(cat && cat.icon) || '📍'}</div>` });
+    L.marker([h.lat, h.lng], { icon }).addTo(hotspotLayer).on('click', () => openHotspot(h));
+  });
+  $('liveStatus').textContent = list.length
+    ? `${list.length} spot${list.length>1?'s':''} nearby`
+    : 'Nothing found here — try panning or another category.';
+}
+
+// A live spot — reuses the spot-detail panel, with OSM's own image/website/wiki
+// links feeding the same photo-fallback chain gems and itinerary stops use.
+function openHotspot(h){
+  focusLocation(h.lat, h.lng);
+  const cat = liveMeta.categories.find(c => c.key === h.category);
+  const wikiTitle = h.wikipedia ? h.wikipedia.split(':').slice(1).join(':') || h.wikipedia : h.name;
+  openSpot({
+    name: h.name, lat: h.lat, lng: h.lng,
+    cat: `${(cat && cat.icon) || '📍'} ${(h.subtype || (cat && cat.label) || 'Nearby').replace(/_/g,' ')}`,
+    catColor: 'var(--accent2)',
+    sub: h.address || '',
+    blurb: '',
+    image: h.image || null,
+    website: h.website || null,
+    wikiTitle,
+    needStreet: !h.address,
+  });
+}
 
 window.setMainBasemap = setMainBasemap; window.recenterMe = recenterMe; window.mapZoom = mapZoom;
 
@@ -1023,6 +1142,7 @@ window.addEventListener('load', async () => {
   ensureMainMap();   // the map is the one and only view
   renderItinerary();
   refreshChip();
+  loadHotspotMeta();  // live "nearby spots" category chips (off until the user picks one)
   await loadGems();  // buildFilters() picks up itinCenter and defaults to "Near your plan"
   renderMapMarkers();
   if (!itinCenter) locateUser();  // an imported plan already framed the view — don't override it

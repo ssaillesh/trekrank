@@ -1,8 +1,9 @@
 """Hotspot discovery via the OpenStreetMap Overpass API (free, no API key).
 
-Pulls categorised points of interest — nightlife, nature, history — around major
-Canadian cities. Results are normalised and cached in Redis (POIs change slowly)
-so we stay friendly to the public Overpass instances and serve the feed fast.
+Pulls categorised points of interest — food, activities, nightlife, nature, history,
+shops — around major Canadian cities, or any arbitrary lat/lng (e.g. the current map
+viewport). Results are normalised and cached in Redis (POIs change slowly) so we stay
+friendly to the public Overpass instances and serve the feed fast.
 """
 import json
 
@@ -59,6 +60,12 @@ CATEGORIES = {
                       '"historic"="fort"', '"historic"="archaeological_site"', '"historic"="ruins"',
                       '"tourism"="museum"'],
     },
+    "shops": {
+        "label": "Shops", "icon": "🛍️",
+        # Existence-only selector (no "="value") — matches every OSM node/way tagged
+        # with any shop=* value, i.e. every kind of local retail in one category.
+        "selectors": ['"shop"'],
+    },
 }
 
 _CACHE_TTL = 60 * 60 * 24 * 7  # 7 days — POIs barely move
@@ -93,7 +100,7 @@ def _normalise(elements: list, category: str) -> list[dict]:
             continue
         seen.add(key)
         subtype = (tags.get("amenity") or tags.get("leisure") or tags.get("historic")
-                   or tags.get("tourism") or tags.get("natural") or category)
+                   or tags.get("tourism") or tags.get("natural") or tags.get("shop") or category)
         # Compose a street line from OSM address tags when present.
         street = tags.get("addr:street")
         if street and tags.get("addr:housenumber"):
@@ -124,11 +131,11 @@ def fetch_hotspots(category: str, *, city_key: str | None = None,
         if not city:
             return []
         lat, lng, radius = city["lat"], city["lng"], city["radius"]
-        cache_key = f"hotspots:v5:{city_key}:{category}"
+        cache_key = f"hotspots:v6:{city_key}:{category}"
     elif lat is not None and lng is not None:
         radius = max(500, min(radius, 8000))
         # Round coords to ~1km so nearby requests share a cache entry.
-        cache_key = f"hotspots:v5:{round(lat, 2)}:{round(lng, 2)}:{radius}:{category}"
+        cache_key = f"hotspots:v6:{round(lat, 2)}:{round(lng, 2)}:{radius}:{category}"
     else:
         return []
 
