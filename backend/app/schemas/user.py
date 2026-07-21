@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -74,52 +74,3 @@ class MapCity(BaseModel):
 class UserMap(BaseModel):
     countries: list[MapCountry]
     cities: list[MapCity]
-
-
-class GlobePoint(BaseModel):
-    """A single proof-of-travel point harvested from a photo's EXIF (or placed manually)."""
-    lat: float
-    lng: float
-    captured_at: datetime | None = None
-    # "exif" = GPS came from the photo's metadata (Verified tier);
-    # "manual" = user-placed (Self-reported tier).
-    source: str | None = None
-    photo_id: str
-    trip_id: str
-    thumbnail_url: str | None = None
-    caption: str | None = None
-    country: str | None = None   # ISO-2, reverse-geocoded
-    place: str | None = None     # city/town name, reverse-geocoded
-
-
-class UserGlobe(BaseModel):
-    points: list[GlobePoint]
-    verified_count: int   # points with EXIF GPS
-    total_count: int
-    country_count: int    # distinct reverse-geocoded countries
-
-
-class InventoryPhoto(BaseModel):
-    """Every uploaded photo, located or not, for the inventory/folder view."""
-    photo_id: str
-    trip_id: str
-    thumbnail_url: str | None = None
-    photo_url: str | None = None
-    captured_at: datetime | None = None
-    lat: float | None = None
-    lng: float | None = None
-    source: str | None = None    # exif | manual | None
-    country: str | None = None
-    place: str | None = None
-    verified: bool               # True only when GPS came from the photo's EXIF
-
-
-class PhotoInventory(BaseModel):
-    photos: list[InventoryPhoto]
-    verified_count: int
-    unverified_count: int
-
-
-class PhotoLocationUpdate(BaseModel):
-    lat: float
-    lng: float

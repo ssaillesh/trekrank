@@ -1,22 +1,19 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, Trip, TripPhoto
+from app.models import User, Trip
 from app.middleware.auth import get_current_user
 from app.schemas.trip import (
-    TripCreate, TripUpdate, TripOut, TripList, PhotoOut, BackfillRequest, BackfillResponse,
+    TripCreate, TripUpdate, TripOut, TripList, BackfillRequest, BackfillResponse,
 )
-from app.api.dispatch import enqueue_trip, enqueue_photo
-from app.services.storage import save_bytes
+from app.api.dispatch import enqueue_trip
 
 router = APIRouter(prefix="/trips", tags=["trips"])
-
-MAX_PHOTO_BYTES = 15 * 1024 * 1024
 
 
 def _to_out(trip: Trip) -> TripOut:
@@ -27,11 +24,6 @@ def _to_out(trip: Trip) -> TripOut:
         dest_country=trip.dest_country, start_date=trip.start_date, end_date=trip.end_date,
         distance_km=float(trip.distance_km) if trip.distance_km is not None else None,
         is_public=trip.is_public, status=trip.status, created_at=trip.created_at,
-        photos=[
-            PhotoOut(id=str(p.id), photo_url=p.photo_url, thumbnail_url=p.thumbnail_url,
-                     caption=p.caption, sort_order=p.sort_order)
-            for p in trip.photos
-        ],
     )
 
 
@@ -150,53 +142,3 @@ def delete_trip(trip_id: str, user: User = Depends(get_current_user), db: Sessio
         leaderboard.rebuild_for_user(db, user)
     except Exception:
         pass
-
-
-@router.post("/{trip_id}/photos", response_model=list[PhotoOut], status_code=201)
-async def upload_photos(
-    trip_id: str,
-    files: list[UploadFile] = File(...),
-    captions: list[str] | None = Form(default=None),
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    trip = _owned_trip(db, trip_id, user)
-    start_order = len(trip.photos)
-    out = []
-    for i, f in enumerate(files):
-        data = await f.read()
-        if len(data) > MAX_PHOTO_BYTES:
-            raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Photo too large")
-        ext = (f.filename or "x.jpg").rsplit(".", 1)[-1].lower()
-        url = save_bytes(data, ext=ext if ext in ("jpg", "jpeg", "png") else "jpg", subdir="photos")
-        photo = TripPhoto(
-            trip_id=trip.id, user_id=user.id, photo_url=url,
-            caption=(captions[i] if captions and i < len(captions) else None),
-            sort_order=start_order + i,
-        )
-        db.add(photo)
-        db.flush()
-        out.append(photo)
-    db.commit()
-    for p in out:
-        db.refresh(p)
-        enqueue_photo(str(p.id))
-    return [
-        PhotoOut(id=str(p.id), photo_url=p.photo_url, thumbnail_url=p.thumbnail_url,
-                 caption=p.caption, sort_order=p.sort_order)
-        for p in out
-    ]
-
-
-@router.delete("/{trip_id}/photos/{photo_id}", status_code=204)
-def delete_photo(trip_id: str, photo_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    trip = _owned_trip(db, trip_id, user)
-    try:
-        pid = uuid.UUID(photo_id)
-    except ValueError:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo not found")
-    photo = db.get(TripPhoto, pid)
-    if not photo or photo.trip_id != trip.id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo not found")
-    db.delete(photo)
-    db.commit()

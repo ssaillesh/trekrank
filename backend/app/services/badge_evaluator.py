@@ -6,7 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.models import (
-    User, Trip, Badge, UserBadge, VisitedCountry, ActivityFeed, TripPhoto,
+    User, Trip, Badge, UserBadge, VisitedCountry, ActivityFeed,
 )
 from app.data.countries import continent_of, countries_in_continent
 
@@ -67,11 +67,6 @@ def _requirement_met(db: Session, user: User, req: dict) -> bool:
         rows = db.execute(select(Trip.start_date).where(Trip.user_id == user.id)).scalars().all()
         counts = Counter((d.year, d.month) for d in rows if d)
         return any(c >= req["threshold"] for c in counts.values())
-    if rtype == "photos_uploaded":
-        count = db.scalar(
-            select(func.count()).select_from(TripPhoto).where(TripPhoto.user_id == user.id)
-        ) or 0
-        return count >= req["threshold"]
     return False
 
 

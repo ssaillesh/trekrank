@@ -26,7 +26,6 @@ BADGES = [
     ("train_lover", "Rail Rider", "Take 10 train trips", "transport", "🚆", {"type": "transport_mode", "mode": "train", "count": 10}),
     ("road_warrior", "Road Warrior", "Take 10 car trips", "transport", "🚗", {"type": "transport_mode", "mode": "car", "count": 10}),
     ("weekend_warrior", "Weekend Warrior", "Log 3 trips in one month", "special", "🎒", {"type": "trips_in_month", "threshold": 3}),
-    ("photographer", "Shutterbug", "Upload 50 trip photos", "special", "📷", {"type": "photos_uploaded", "threshold": 50}),
     # Per-continent "set foot here" badges. The continent the user resides in
     # (their home country) always counts as visited.
     ("visited_af", "Out of Africa", "Set foot in Africa", "continent", "🦁", {"type": "continent_visited", "continent": "AF"}),

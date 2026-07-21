@@ -16,7 +16,7 @@ Geocoding: Nominatim / OpenStreetMap (free, no API key)
 ```
 
 Everything uses **free / open-source components** — no paid APIs. Geocoding is the
-free Nominatim endpoint; photo/share-card storage defaults to the local filesystem.
+free Nominatim endpoint; share-card storage defaults to the local filesystem.
 
 ---
 
@@ -24,14 +24,14 @@ free Nominatim endpoint; photo/share-card storage defaults to the local filesyst
 
 **Backend (Python 3.10+, FastAPI):** all endpoints from the spec —
 auth (email register/login + JWT refresh + Apple sign-in stub + GDPR delete),
-users/profile/stats/map/search, trips CRUD + photo upload + onboarding backfill,
+users/profile/stats/map/search, trips CRUD + onboarding backfill,
 friends (request/accept/reject/suggestions), friend & global leaderboards (Redis
 sorted sets), cursor-paginated activity feed, badges (20 seeded) + evaluation,
 group challenges, and Instagram-Story share-card generation.
 
-**4 Celery workers:** trip processor (geocode → distance → visited tables → stats →
-leaderboards → feed → badge trigger), badge evaluator, photo processor
-(EXIF strip + thumbnail/medium), share-card generator (Pillow, 1080×1920 PNG).
+**3 Celery workers:** trip processor (geocode → distance → visited tables → stats →
+leaderboards → feed → badge trigger), badge evaluator, share-card generator
+(Pillow, 1080×1920 PNG).
 
 **iOS app (SwiftUI, iOS 17):** auth, feed, trips list + add-trip, friend/global
 leaderboards, MapKit world map of visited cities, profile with stats/badges and

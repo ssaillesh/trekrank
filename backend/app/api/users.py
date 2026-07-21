@@ -1,20 +1,16 @@
-import uuid
-
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, VisitedCountry, VisitedCity, Badge, UserBadge, Trip, TripPhoto
+from app.models import User, VisitedCountry, VisitedCity, Badge, UserBadge
 from app.middleware.auth import get_current_user
 from app.schemas.user import (
     UserProfile, UserPublic, UserUpdate, UserStats, UserMap, MapCountry, MapCity,
-    FeaturedBadgesUpdate, GlobePoint, UserGlobe,
-    InventoryPhoto, PhotoInventory, PhotoLocationUpdate,
+    FeaturedBadgesUpdate,
 )
 from app.schemas.social import BadgeOut
 from app.services.stats import detailed_stats
-from app.services.geocoding import reverse_geocode
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -90,59 +86,6 @@ def set_featured_badges(
     return _profile(user, include_email=True)
 
 
-def _inventory_item(p: TripPhoto) -> InventoryPhoto:
-    return InventoryPhoto(
-        photo_id=str(p.id), trip_id=str(p.trip_id),
-        thumbnail_url=p.thumbnail_url, photo_url=p.photo_url,
-        captured_at=p.captured_at, lat=p.captured_lat, lng=p.captured_lng,
-        source=p.location_source, country=p.captured_country, place=p.captured_place,
-        verified=p.location_source == "exif",
-    )
-
-
-@router.get("/me/photos", response_model=PhotoInventory)
-def my_photos(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Every photo the user uploaded — verified (EXIF GPS), manually placed, or
-    still unplaced — for the inventory/folder view."""
-    rows = db.execute(
-        select(TripPhoto).where(TripPhoto.user_id == user.id)
-        .order_by(TripPhoto.created_at.desc())
-    ).scalars().all()
-    items = [_inventory_item(p) for p in rows]
-    verified = sum(1 for i in items if i.verified)
-    return PhotoInventory(photos=items, verified_count=verified,
-                          unverified_count=len(items) - verified)
-
-
-@router.patch("/me/photos/{photo_id}/location", response_model=InventoryPhoto)
-def set_photo_location(
-    photo_id: str, body: PhotoLocationUpdate,
-    user: User = Depends(get_current_user), db: Session = Depends(get_db),
-):
-    """Manually place a photo that had no EXIF GPS. Marks it 'manual' (unverified)
-    and reverse-geocodes the country/place so it appears on the map."""
-    try:
-        pid = uuid.UUID(photo_id)
-    except ValueError:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo not found")
-    photo = db.get(TripPhoto, pid)
-    if not photo or photo.user_id != user.id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo not found")
-    if not (-90 <= body.lat <= 90 and -180 <= body.lng <= 180):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid coordinates")
-    photo.captured_lat = body.lat
-    photo.captured_lng = body.lng
-    photo.location_source = "manual"
-    geo = reverse_geocode(body.lat, body.lng)
-    if geo:
-        photo.captured_country = geo["country_code"]
-        photo.captured_place = geo["place"]
-    db.add(photo)
-    db.commit()
-    db.refresh(photo)
-    return _inventory_item(photo)
-
-
 @router.get("/search", response_model=list[UserPublic])
 def search_users(q: str = Query(min_length=1), db: Session = Depends(get_db)):
     rows = db.execute(
@@ -205,39 +148,3 @@ def get_map(username: str, db: Session = Depends(get_db)):
             for c in cities
         ],
     )
-
-
-@router.get("/{username}/globe", response_model=UserGlobe)
-def get_globe(username: str, db: Session = Depends(get_db)):
-    """Lifetime proof-of-travel points for the user's globe.
-
-    Only photos with a harvested location and belonging to a public trip are
-    returned; ordered oldest-first so the front-end can draw the route over time.
-    """
-    user = _get_by_username(db, username)
-    rows = db.execute(
-        select(TripPhoto)
-        .join(Trip, TripPhoto.trip_id == Trip.id)
-        .where(
-            TripPhoto.user_id == user.id,
-            TripPhoto.captured_lat.is_not(None),
-            TripPhoto.captured_lng.is_not(None),
-            Trip.is_public.is_(True),
-        )
-        .order_by(TripPhoto.captured_at.asc().nullslast(), TripPhoto.created_at.asc())
-    ).scalars().all()
-
-    points = [
-        GlobePoint(
-            lat=p.captured_lat, lng=p.captured_lng,
-            captured_at=p.captured_at, source=p.location_source,
-            photo_id=str(p.id), trip_id=str(p.trip_id),
-            thumbnail_url=p.thumbnail_url, caption=p.caption,
-            country=p.captured_country, place=p.captured_place,
-        )
-        for p in rows
-    ]
-    verified = sum(1 for p in points if p.source == "exif")
-    country_count = len({p.country for p in points if p.country})
-    return UserGlobe(points=points, verified_count=verified,
-                     total_count=len(points), country_count=country_count)

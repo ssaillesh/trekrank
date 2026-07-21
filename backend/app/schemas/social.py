@@ -72,7 +72,6 @@ class FeedItem(BaseModel):
     trip: FeedTrip | None = None
     badge: FeedBadge | None = None
     recommendation: FeedRecommendation | None = None
-    photo_url: str | None = None
     created_at: datetime
 
 

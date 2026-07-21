@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, date
 
-from sqlalchemy import String, Text, Integer, Numeric, Boolean, Date, DateTime, CHAR, Float, ForeignKey, func
+from sqlalchemy import String, Text, Numeric, Boolean, Date, DateTime, CHAR, Float, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -52,41 +52,3 @@ class Trip(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    photos: Mapped[list["TripPhoto"]] = relationship(
-        back_populates="trip", cascade="all, delete-orphan", order_by="TripPhoto.sort_order"
-    )
-
-
-class TripPhoto(Base):
-    __tablename__ = "trip_photos"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    trip_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("trips.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-
-    photo_url: Mapped[str] = mapped_column(String(500), nullable=False)
-    thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    caption: Mapped[str | None] = mapped_column(String(300), nullable=True)
-    sort_order: Mapped[int] = mapped_column(Integer, default=0)
-
-    # Proof-of-travel: GPS + timestamp harvested from the photo's EXIF before the
-    # stored copy is stripped. captured_lat/lng/at are NULL when the photo had no
-    # usable EXIF GPS (e.g. screenshots, social-app downloads). location_source is
-    # "exif" for harvested points and "manual" for user-placed ones; it drives the
-    # Verified vs Self-reported tier shown on the globe.
-    captured_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
-    captured_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
-    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    location_source: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    # Reverse-geocoded from captured_lat/lng so the globe can report an exact
-    # country count and a place label per point. NULL until the worker resolves it.
-    captured_country: Mapped[str | None] = mapped_column(CHAR(2), nullable=True)
-    captured_place: Mapped[str | None] = mapped_column(String(120), nullable=True)
-
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    trip: Mapped["Trip"] = relationship(back_populates="photos")

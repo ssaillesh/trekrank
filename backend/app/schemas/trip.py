@@ -38,14 +38,6 @@ class TripUpdate(BaseModel):
     end_date: date | None = None
 
 
-class PhotoOut(BaseModel):
-    id: str
-    photo_url: str
-    thumbnail_url: str | None = None
-    caption: str | None = None
-    sort_order: int = 0
-
-
 class TripOut(BaseModel):
     id: str
     user_id: str
@@ -62,7 +54,6 @@ class TripOut(BaseModel):
     is_public: bool = True
     status: str = "processing"
     created_at: datetime
-    photos: list[PhotoOut] = []
 
 
 class TripList(BaseModel):

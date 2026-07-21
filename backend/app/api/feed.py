@@ -37,8 +37,6 @@ def _render(db: Session, rows, users_cache: dict) -> list[FeedItem]:
                     dest_country=trip.dest_country,
                     distance_km=float(trip.distance_km) if trip.distance_km else None,
                 )
-                if trip.photos:
-                    item.photo_url = trip.photos[0].thumbnail_url or trip.photos[0].photo_url
         if af.badge_id:
             badge = db.get(Badge, af.badge_id)
             if badge:
