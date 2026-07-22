@@ -25,12 +25,14 @@ def distance_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 def distance_km_postgis(db, lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """PostGIS-backed equivalent (used when the extension is available)."""
     from sqlalchemy import text
-    result = db.execute(
-        text(
-            "SELECT ST_Distance("
-            "  ST_SetSRID(ST_MakePoint(:lng1, :lat1), 4326)::geography,"
-            "  ST_SetSRID(ST_MakePoint(:lng2, :lat2), 4326)::geography) / 1000.0"
-        ),
-        {"lng1": lng1, "lat1": lat1, "lng2": lng2, "lat2": lat2},
-    ).scalar_one()
+    from app.metrics import time_postgis_query
+    with time_postgis_query("st_distance"):
+        result = db.execute(
+            text(
+                "SELECT ST_Distance("
+                "  ST_SetSRID(ST_MakePoint(:lng1, :lat1), 4326)::geography,"
+                "  ST_SetSRID(ST_MakePoint(:lng2, :lat2), 4326)::geography) / 1000.0"
+            ),
+            {"lng1": lng1, "lat1": lat1, "lng2": lng2, "lat2": lat2},
+        ).scalar_one()
     return round(float(result), 2)

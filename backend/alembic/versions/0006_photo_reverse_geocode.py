@@ -22,7 +22,11 @@ def _columns() -> dict:
 
 def upgrade() -> None:
     # Idempotent: create_all() builds these on a fresh DB; add only what's missing.
+    # trip_photos itself is gone from the models as of 0007, so a fresh DB never
+    # creates it at all — skip.
     bind = op.get_bind()
+    if "trip_photos" not in sa.inspect(bind).get_table_names():
+        return
     existing = {c["name"] for c in sa.inspect(bind).get_columns("trip_photos")}
     for name, column in _columns().items():
         if name not in existing:

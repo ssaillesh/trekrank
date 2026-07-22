@@ -16,6 +16,7 @@ from app.services import llm
 from app.services import weather as weather_svc
 from app.services import events as events_svc
 from app.services import experience
+from app.metrics import time_itinerary_generation
 
 # Indoor-only activity set for wet/cold days.
 INDOOR_ACTIVITIES = "arcades,escapegames,bowling,poolhalls,lasertag,karaoke,trampoline,museums,aquariums"
@@ -391,6 +392,20 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
                time_of_day=None, group_type=None, dietary="", interests="", avoid="",
                radius=None, exclude=None, vary=False, target_stops=4,
                requested_venues=None, seed=None, surprise=False):
+    with time_itinerary_generation("single_day"):
+        return _build_plan(
+            lat=lat, lng=lng, budget=budget, vibe=vibe, party_size=party_size,
+            transport=transport, time_of_day=time_of_day, group_type=group_type,
+            dietary=dietary, interests=interests, avoid=avoid, radius=radius,
+            exclude=exclude, vary=vary, target_stops=target_stops,
+            requested_venues=requested_venues, seed=seed, surprise=surprise,
+        )
+
+
+def _build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="any",
+                time_of_day=None, group_type=None, dietary="", interests="", avoid="",
+                radius=None, exclude=None, vary=False, target_stops=4,
+                requested_venues=None, seed=None, surprise=False):
     # A caller-supplied seed makes the draw reproducible; each new seed is a
     # genuinely different roll. Surprise mode implies variety.
     rng = random.Random(seed) if seed is not None else random
@@ -549,18 +564,19 @@ def build_plan(*, lat, lng, budget, vibe=DEFAULT_VIBE, party_size=2, transport="
 
 
 def build_trip(*, days, lat, lng, budget, exclude=None, **opts):
-    days = max(1, min(days, 5))
-    per_day = budget / days
-    used, trip = set(exclude or ()), []
-    seed = opts.pop("seed", None)
-    for d in range(days):
-        plan = build_plan(lat=lat, lng=lng, budget=per_day, exclude=used,
-                          seed=(seed + d if seed is not None else None), **opts)
-        plan["day"] = d + 1
-        for s in plan["stops"]:
-            used.add(s["name"].lower())
-        trip.append(plan)
-    return trip
+    with time_itinerary_generation("multi_day"):
+        days = max(1, min(days, 5))
+        per_day = budget / days
+        used, trip = set(exclude or ()), []
+        seed = opts.pop("seed", None)
+        for d in range(days):
+            plan = build_plan(lat=lat, lng=lng, budget=per_day, exclude=used,
+                              seed=(seed + d if seed is not None else None), **opts)
+            plan["day"] = d + 1
+            for s in plan["stops"]:
+                used.add(s["name"].lower())
+            trip.append(plan)
+        return trip
 
 
 # ===================== PICKER: options + build-from-selection =================

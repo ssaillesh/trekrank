@@ -4,6 +4,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -27,6 +28,10 @@ app.add_middleware(
 )
 app.add_middleware(RateLimitMiddleware)
 
+# Prometheus: per-route request count + latency histograms (p95 etc. via
+# histogram_quantile in PromQL/Grafana), exposed at GET /metrics.
+Instrumentator().instrument(app).expose(app, include_in_schema=False)
+
 # Serve locally-stored media (share cards) when STORAGE_BACKEND=local.
 if settings.storage_backend == "local":
     os.makedirs(settings.local_storage_dir, exist_ok=True)
@@ -41,12 +46,6 @@ for r in (auth, users, trips, friends, leaderboards, feed, badges, challenges, s
 @app.get("/health", tags=["meta"])
 def health():
     return {"status": "ok", "app": settings.app_name, "env": settings.environment}
-
-
-@app.get("/metrics", tags=["meta"])
-def metrics():
-    """Minimal Prometheus-style metrics stub (extend with prometheus_client in prod)."""
-    return {"trekrank_up": 1}
 
 
 @app.get("/", tags=["meta"])

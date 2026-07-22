@@ -63,6 +63,13 @@ services:
   grafana:
     image: grafana/grafana
     ports: ["3000:3000"]
+    environment:
+      # Dev convenience only — anonymous viewer access, no auth. Do not use this
+      # compose file as-is for anything internet-facing.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - "./infra/grafana/provisioning:/etc/grafana/provisioning"
     depends_on: [prometheus]
 
 volumes:
